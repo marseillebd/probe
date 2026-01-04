@@ -3,8 +3,8 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
-    flake-utils.url = "github:numtide/flake-utils";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = {
@@ -18,7 +18,20 @@
     pkgs = import nixpkgs { inherit system; };
     lib = pkgs.lib;
 
+    # TODO extract this to a package, and also see if it works regardless of package include order
+    posixsh = pkgs.stdenvNoCC.mkDerivation {
+      name = "symlink-sh-dash";
+      dontUnpack = true;
+      buildInputs = [pkgs.dash pkgs.which];
+      buildPhase = "which dash >&2";
+      installPhase = ''
+        mkdir -p $out/bin
+        ln -s "$(which dash)" "$out/bin/sh"
+      '';
+    };
+
     tooling.shells = with pkgs; [
+      posixsh    # interpreter (links to dash)
       bash       # interpreter
       shellcheck # linter
       shfmt      # formatter
@@ -26,9 +39,11 @@
   in
 
     {
-      devShells.default = pkgs.mkShell {
+
+      devShells.default = pkgs.mkShellNoCC {
         nativeBuildInputs = tooling.shells;
       };
+
     }
 
   );
