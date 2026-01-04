@@ -18,26 +18,29 @@
     pkgs = import nixpkgs { inherit system; };
     lib = pkgs.lib;
 
-    # TODO extract this to a package, and also see if it works regardless of package include order
-    posixsh = pkgs.stdenvNoCC.mkDerivation {
-      name = "symlink-sh-dash";
-      dontUnpack = true;
-      buildInputs = [pkgs.dash pkgs.which];
-      buildPhase = "which dash >&2";
-      installPhase = ''
-        mkdir -p $out/bin
-        ln -s "$(which dash)" "$out/bin/sh"
+    # These two bindings create modified versions of existing packages.
+    # Specifically, `bash` no longer tries to link itself into `sh`,
+    # and we get a posix-compliant shell (dash) to link itself to `sh` instead.
+    # TODO what if I made a package where you can just set the package you want to symlink to?
+    posixsh = pkgs.dash.overrideAttrs (final: prev: {
+      postInstall = (prev.postInstall or "") + ''
+        ln -s $out/bin/dash $out/bin/sh
       '';
-    };
+    });
+    bash_noln = pkgs.bash.overrideAttrs (final: prev: {
+      postInstall = (prev.postInstall or "") + ''
+        rm $out/bin/sh
+      '';
+    });
 
     tooling.shells = with pkgs; [
-      posixsh    # interpreter (links to dash)
-      bash       # interpreter
+      posixsh    # sh interpreter (links to dash)
+      bash_noln  # bash interpreter
       shellcheck # linter
       shfmt      # formatter
     ];
-  in
 
+  in
     {
 
       devShells.default = pkgs.mkShellNoCC {
