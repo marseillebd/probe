@@ -57,9 +57,43 @@ Stock Code
 ----------
 
 - [x] [EditorConfig](https://editorconfig.org/)
+- [ ] `.gitattributes`
 - [ ] sample git hooks
   - [ ] shellcheck, shfmt before commit
   - [ ] run test cases before push?
+
+Structural
+----------
+
+- [ ] gui git tool so I can look at the different experiments
+- [x] learn directory, with reference resources for various environs/tools
+- [ ] utilities directory, for little custom tools that aren't packaged separately
+
+Environments
+------------
+
+- [ ] c (incl gcc, clang, tinycc?, certc?)
+    - evaluate:
+        - [ ] [CCAN - C Code Archine Network](https://ccodearchive.net/)
+        - [x] [zpl](https://github.com/zpl-c/zpl): too general/portable, but good inspo
+        - [ ] [arena](https://github.com/daddinuz/arena)
+        - [ ] defer TS on gcc and clang
+        - [ ] a set of opengl helpers
+        - [ ] [stb](https://github.com/nothings/stb)
+        - [ ] [clib](https://github.com/clibs/clib): honestly, probly wouldl just use nix as my package manager
+        - [ ] [nob](https://github.com/tsoding/nob.h)
+        - [ ] [raylib](https://github.com/raysan5/raylib)
+- [ ] hs
+- [ ] md
+- [ ] nix
+- [ ] rust
+- [ ] elf
+- [ ] x64, x86, other asms
+- [ ] js, ts
+- [ ] python
+- [ ] taskfiles
+- [ ] vimscript
+- [ ] data formats: jsoon, toml, sexpr, cookie-jar
 
 Sh/Bash
 -------
@@ -77,24 +111,4 @@ Sh/Bash
 - [ ] [shellharden?](https://github.com/anordal/shellharden/)
 
 - [ ] how do I search for an ancestor file/directory matching some condition? like how git finds the repo by looking for a parent with a .git folder?
-
-Structural
-----------
-
-- [ ] gui git tool so I can look at the different experiments
-- [x] learn directory, with reference resources for various environs/tools
-- [ ] utilities directory, for little custom tools that aren't packaged separately
-
-Environments:
-- [ ] c (incl gcc, clang, tinycc?, certc?)
-- [ ] hs
-- [ ] md
-- [ ] nix
-- [ ] rust
-- [ ] elf
-- [ ] x64, x86, other asms
-- [ ] js, ts
-- [ ] python
-- [ ] taskfiles
-- [ ] vimscript
 
