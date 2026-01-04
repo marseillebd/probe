@@ -39,6 +39,7 @@ Follow-up
 ---------
 
 - [ ] [{extra,}{native,}BuildInputs](https://discourse.nixos.org/t/extrabuildinputs-extranativebuildinputs/30664/2)
+- [ ] [replology](https://repology.org/) for tracking where my project is packaged
 
 Utilities
 ---------
@@ -50,6 +51,7 @@ Utilities
 - [ ] copyright management stuff
 - [ ] smth to make writing one-off services/daemons easy
 - [ ] audit tools from compiler-tools
+- [ ] dependency tracking tools
 
 Stock Code
 ----------
@@ -80,7 +82,7 @@ Structural
 ----------
 
 - [ ] gui git tool so I can look at the different experiments
-- [ ] learn directory, with reference resources for various environs/tools
+- [x] learn directory, with reference resources for various environs/tools
 - [ ] utilities directory, for little custom tools that aren't packaged separately
 
 Environments:
