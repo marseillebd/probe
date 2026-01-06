@@ -33,6 +33,10 @@
       '';
     });
 
+    tooling.plaintext = with pkgs; [
+      eclint
+    ];
+
     tooling.shells = with pkgs; [
       posixsh    # sh interpreter (links to dash)
       bash_noln  # bash interpreter
@@ -44,7 +48,7 @@
     {
 
       devShells.default = pkgs.mkShellNoCC {
-        nativeBuildInputs = tooling.shells;
+        nativeBuildInputs = tooling.plaintext ++ tooling.shells;
       };
 
     }

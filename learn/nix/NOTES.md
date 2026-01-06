@@ -46,6 +46,13 @@ References:
 Development Environments
 ========================
 
+Minimize the environoment
+-------------------------
+
+Esp b/c it could speed up/shrink CI/CD infrastructure.
+
+- [ ] follow up on [blog](https://fzakaria.com/2021/08/02/a-minimal-nix-shell.html)
+
 Set `sh` to a posix shell
 -------------------------
 

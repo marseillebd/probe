@@ -53,12 +53,20 @@ Utilities
 - [ ] audit tools from compiler-tools
 - [ ] dependency tracking tools
 
+- [ ] a general-purpose literate programming tool
+  - evaluate:
+    - [ ] [shocco](https://rtomayko.github.io/shocco/) looks really nice,
+      but only for langs that use `#` comments and expect a shebang.
+      Could be hacked into something more general-purpose fairly easily, good chance to try a _modeled_ state-machine approach.
+
 Stock Code
 ----------
 
 - [x] [EditorConfig](https://editorconfig.org/)
 - [ ] `.gitattributes`
 - [ ] sample git hooks
+  - [ ] eclint before commit
+  - [ ] look into the uses of other git hooks
   - [ ] shellcheck, shfmt before commit
   - [ ] run test cases before push?
 
@@ -80,9 +88,11 @@ Environments
         - [ ] defer TS on gcc and clang
         - [ ] a set of opengl helpers
         - [ ] [stb](https://github.com/nothings/stb)
+          - the lexer might be a nice thing to have
         - [ ] [clib](https://github.com/clibs/clib): honestly, probly wouldl just use nix as my package manager
         - [ ] [nob](https://github.com/tsoding/nob.h)
         - [ ] [raylib](https://github.com/raysan5/raylib)
+        - [ ] [libffi](https://github.com/libffi/libffi)
 - [ ] hs
 - [ ] md
 - [ ] nix
@@ -94,6 +104,7 @@ Environments
 - [ ] taskfiles
 - [ ] vimscript
 - [ ] data formats: jsoon, toml, sexpr, cookie-jar
+- [ ] I could be convinced to try ada
 
 Sh/Bash
 -------
@@ -109,6 +120,9 @@ Sh/Bash
   - [ ] gnu bash reference
   - [x] style.yasp.sh refere
 - [ ] [shellharden?](https://github.com/anordal/shellharden/)
+- [ ] testing
+  - evaluate:
+    - [ShellSpec](https://shellspec.info/)
 
 - [ ] how do I search for an ancestor file/directory matching some condition? like how git finds the repo by looking for a parent with a .git folder?
 
