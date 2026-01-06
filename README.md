@@ -63,11 +63,12 @@ Stock Code
 ----------
 
 - [x] [EditorConfig](https://editorconfig.org/)
-- [ ] `.gitattributes`
+- [x] `.gitattributes`
+  - [ ] there are a number of attributes that linguist uses (which is used by github), see [here](https://github.com/github-linguist/linguist/blob/main/docs/overrides.md)
 - [ ] sample git hooks
-  - [ ] eclint before commit
+  - [x] eclint before commit
   - [ ] look into the uses of other git hooks
-  - [ ] shellcheck, shfmt before commit
+  - [x] shellcheck, shfmt before commit
   - [ ] run test cases before push?
 
 Structural

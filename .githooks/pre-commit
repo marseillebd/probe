@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
-if git rev-parse --verify HEAD >/dev/null 2>&1
-then
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
   against=HEAD
 else
   # Initial commit: diff against an empty tree object
@@ -11,8 +10,8 @@ fi
 # Redirect output to stderr.
 exec 1>&2
 
-# The Tests
-# =========
+# Generic Tests
+# =============
 
 # Non-Ascii Filenames
 # -------------------
@@ -24,8 +23,7 @@ if test "$(git diff-index --cached --name-only --diff-filter=A -z "$against" |
   # Note that the use of brackets around a tr range is ok here, (it's
   # even required, for portability to Solaris 10's /usr/bin/tr), since
   # the square bracket bytes happen to fall in the designated range.
-    LC_ALL=C tr -d '[ -~]\0' | wc -c)" != 0
-then
+  LC_ALL=C tr -d '[ -~]\0' | wc -c)" != 0; then
   cat <<\EOF
 Error: Attempt to add a non-ASCII file name.
 
@@ -45,11 +43,11 @@ fi
 
 # Consistent control code usage in plaintext helps keep commit noise low.
 # Use the rules in the `.editorconfig` to check whitespace, newlines, and so on.
-eclinterr=0
+err=0
 for f in $(git diff-index --cached --name-only --diff-filter=AM "$against"); do
-  eclint "$f" || eclinterr=1
+  eclint "$f" || err=1
 done
-if [ "$eclinterr" = 1 ]; then
+if [ "$err" = 1 ]; then
   cat <<\EOF
 Error: Attempt to commit code that does not abide by the editorconfig rules.
 
@@ -67,4 +65,57 @@ fi
 
 # If there are whitespace errors, print the offending file names and fail.
 # I can probably skip this, since I have the eclint.
-#exec git diff-index --check --cached $against --
+#git diff-index --check --cached $against -- || exit 1
+
+# Shell Tests
+# ===========
+
+# Lint
+# ----
+
+err=0
+for f in $(git diff-index --cached --name-only --diff-filter=AM "$against"); do
+  case "$f" in
+  *.sh | *.bash)
+    shellcheck "$f" || err=1
+    ;;
+  .githooks/*)
+    shellcheck -s sh "$f" || err=1
+    ;;
+  esac
+done
+if [ "$err" = 1 ]; then
+  cat <<\EOF
+Error: shell scripts do not pass shellcheck linting.
+
+Shell is full of footguns.
+The least we can do is scan for the the obvious traps before sharing broken code.
+
+Please fix these issues before committing.
+EOF
+  exit 1
+fi
+
+# Format
+# ------
+
+err=0
+for f in $(git diff-index --cached --name-only --diff-filter=AM "$against"); do
+  case "$f" in
+  *.sh | *.bash | .githooks/*)
+    shfmt -d "$f" || err=1
+    ;;
+  esac
+done
+if [ "$err" = 1 ]; then
+  cat <<\EOF
+Error: shell scripts do not pass shfmt formatting
+
+Please respect the style guidelines already present in this repository.
+
+Check the generated diffs, and youo may auto-apply fixes with:
+
+  shfmt -w <files...>
+EOF
+  exit 1
+fi
