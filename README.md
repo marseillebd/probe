@@ -44,10 +44,15 @@ Follow-up
 Utilities
 ---------
 
-- [ ] rlwrap
-- [ ] tree, sponge, jq, yq?, watch, smth to get notified on filesys changes
-- [ ] rg, ag
-- [ ] icdiff (perhaps more difftools)
+- [x] rlwrap
+- [ ] cloc
+- [x] tree, sponge (moreutils)
+- [ ] watch
+- [ ] jq, yq?
+- [x] inotify-tools
+- [x] rg, ag
+- [x] icdiff
+  - [ ] perhaps more difftools
 - [ ] copyright management stuff
 - [ ] smth to make writing one-off services/daemons easy
 - [ ] audit tools from compiler-tools

@@ -51,6 +51,15 @@
       '';
     });
 
+    tooling.utils = with pkgs; [
+      silver-searcher ripgrep # TODO evaluate which I like better
+      icdiff
+      inotify-tools
+      moreutils
+      rlwrap
+      tree
+    ];
+
     tooling.plaintext = with pkgs; [
       eclint
     ];
@@ -74,7 +83,8 @@
 
       devShells.default = pkgs.mkShellNoCC {
         nativeBuildInputs
-          = tooling.plaintext
+          =  tooling.plaintext
+          ++ tooling.utils
           ++ tooling.shells
           ++ tooling.c
         ;
