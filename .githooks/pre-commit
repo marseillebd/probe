@@ -43,6 +43,11 @@ fi
 
 # Consistent control code usage in plaintext helps keep commit noise low.
 # Use the rules in the `.editorconfig` to check whitespace, newlines, and so on.
+if ! command -v eclint >/dev/null; then
+  echo "eclint not found"
+  echo "  install, or use the nix environment"
+  exit 1
+fi
 err=0
 for f in $(git diff-index --cached --name-only --diff-filter=AM "$against"); do
   eclint "$f" || err=1
