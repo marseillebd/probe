@@ -34,7 +34,12 @@
     });
 
     tooling.utils = with pkgs; [
+      silver-searcher ripgrep # TODO evaluate which I like better
+      icdiff
       inotify-tools
+      moreutils
+      rlwrap
+      tree
     ];
 
     tooling.shells = with pkgs; [
