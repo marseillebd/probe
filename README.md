@@ -86,36 +86,50 @@ Structural
 Environments
 ------------
 
-- [ ] c (incl gcc, clang, tinycc?, certc?)
-    - evaluate:
-        - [ ] [CCAN - C Code Archine Network](https://ccodearchive.net/)
-        - [x] [zpl](https://github.com/zpl-c/zpl): too general/portable, but good inspo
-        - [ ] [arena](https://github.com/daddinuz/arena)
-        - [ ] defer TS on gcc and clang
-        - [ ] a set of opengl helpers
-        - [ ] [stb](https://github.com/nothings/stb)
-          - the lexer might be a nice thing to have
-        - [ ] [clib](https://github.com/clibs/clib): honestly, probly wouldl just use nix as my package manager
-        - [ ] [nob](https://github.com/tsoding/nob.h)
-        - [ ] [raylib](https://github.com/raysan5/raylib)
-        - [ ] [libffi](https://github.com/libffi/libffi)
-- [ ] hs
-- [ ] md
-- [ ] nix
-- [ ] rust
-- [ ] elf
-- [ ] x64, x86, other asms
-- [ ] js, ts
-- [ ] python
-- [ ] taskfiles
-- [ ] vimscript
-- [ ] data formats: jsoon, toml, sexpr, cookie-jar
-- [ ] I could be convinced to try ada
+- systems programming:
+    - [ ] c (incl gcc, clang, tinycc?, certc?)
+        - evaluate:
+            - [ ] [CCAN - C Code Archine Network](https://ccodearchive.net/)
+            - [x] [zpl](https://github.com/zpl-c/zpl): too general/portable, but good inspo
+            - [ ] [arena](https://github.com/daddinuz/arena)
+            - [ ] defer TS on gcc and clang
+            - [ ] a set of opengl helpers
+            - [ ] [stb](https://github.com/nothings/stb)
+            - the lexer might be a nice thing to have
+            - [ ] [clib](https://github.com/clibs/clib): honestly, probly wouldl just use nix as my package manager
+            - [ ] [nob](https://github.com/tsoding/nob.h)
+            - [ ] [raylib](https://github.com/raysan5/raylib)
+            - [ ] [libffi](https://github.com/libffi/libffi)
+    - [ ] elf
+    - [ ] x64, x86, other asms
+    - [ ] rust
+    - [ ] zig, c0, austral
+    - [ ] I could be convinced to try ada
+- application programming:
+    - [ ] hs
+- devops:
+    - [ ] nix
+    - [ ] taskfiles
+- scripting:
+    - [ ] js, ts
+    - [ ] python
+    - [ ] vimscript
+- media:
+    - [ ] md
+- data formats:
+    - [ ] json
+    - [ ] toml
+    - [ ] sexpr
+    - [ ] cookie-jar
+- hardware/embedded:
+    - [ ] VHDL/Verilog and a simulator
+    - [ ] arduino
+    - [ ] generic cross-coopmilers+libs for embedded
 
 Sh/Bash
 -------
 
-- [ ] posix sh
+- [x] posix sh
 
 - [x] use devshell bash
 - [x] template
