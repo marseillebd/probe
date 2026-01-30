@@ -8,7 +8,20 @@
 <!---------------->
 <style>
 
+#content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
 
+#content { counter-reset: line; }
+#content > div > code > pre:before {
+  counter-increment: line;
+  content: counter(line);
+}
+
+#content details {
+  margin-left: 1em;
+}
 
 </style>
 
@@ -27,7 +40,75 @@
 <!------------------>
 <body>
 
+<div id=content>
 
+  <div>
+    Some documentation, presumably in markdown.
+  </div>
+  <div>
+    <code>
+      <pre>The associated source code.</pre>
+      <pre>Another line</pre>
+    </code>
+  </div>
+
+  <div>
+    Here, I want to splice two things on the line.
+  </div>
+  <div>
+    <code>
+      <pre>(printf "%d %s\n" 137 (cstr "Hello"))</pre>
+    </code>
+    <details>
+      <summary>Splice <code>(cstr ...)</code></summary>
+      <code>
+        <pre>"Hello\0"</pre>
+      </code>
+    </details>
+    <details>
+      <summary>Splice <code>(printf ...)</code></summary>
+      <code>
+        <pre>do:</pre>
+        <pre>  print $ Num.Int.decimal 137</pre>
+        <pre>  print " "</pre>
+        <pre>  print "Hello\0"</pre>
+        <pre>  print "\n"</pre>
+      </code>
+    </details>
+  </div>
+
+  <div>
+    And now, a splice which expands with another splice inside:
+  </div>
+  <div>
+    <code>
+      <pre>(if true (print "Hello\n"))</pre>
+    </code>
+    <details>
+      <summary>Splice <code>(if ...)</code></summary>
+      <code>
+        <pre>(force (boolElim true</pre>
+        <pre>  (lazy (print "Hello\n"))</pre>
+      </code>
+      <details>
+        <summary>Splice <code>(lazy ...)</code></summary>
+        <code>
+          <pre>(lambda () ())</pre>
+        </code>
+      </details>
+      <code>
+        <pre>  (lazy ())))</pre>
+      </code>
+      <details>
+        <summary>Splice <code>(lazy ...)</code></summary>
+        <code>
+          <pre>(lambda () ())</pre>
+        </code>
+      </details>
+    </details>
+  </div>
+
+</div>
 
 </body>
 </html>
