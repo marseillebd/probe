@@ -31,13 +31,21 @@ main = do
 -- For every other line, we defer line parsing to `parseTySrc`
         & \case
           x : xs | "#!" `isPrefixOf` x
-            -> TySrc Shebang x : map parseTySrc xs
-          xs -> map parseTySrc xs
+            -> TySrc 1 Shebang x : zipWith parseTySrc [2..] xs
+          xs -> zipWith parseTySrc [1..] xs
 -- Group lines by type and then pair documentation with code.
         & groupSrc
         & pairSrc
-  print results.shebang
-  mapM_ print results.rows
+  let outdir = "qd"
+  -- FIXME remove the outdir first
+  mkdir_p outdir
+  maybeM_ results.shebang $ \sb -> do
+    writeFile (outdir </> "000001.shebang.qd") sb
+  forM_ results.rows $ \pair -> do
+    let lineStr = show pair.codeStartLine
+        seqStr = drop (length lineStr) "000000" <> lineStr -- six digits actually allows line numbers to be sorted write up to seven 9s
+    writeFile (outdir </> seqStr <.> "docs.qd") pair.docs
+    writeFile (outdir </> seqStr <.> "code.qd") pair.code
 
 -- # Parsing
 
@@ -46,7 +54,8 @@ main = do
 -- The objective here is to separate out the (literate) documenation from the code.
 -- To do this, we tag each line with a type and then group types together.
 data TypedSrc = TySrc
-  { ty :: SrcType
+  { startLine :: Int
+  , ty :: SrcType
   , txt :: String
   }
 
@@ -58,13 +67,13 @@ data SrcType
   deriving (Eq)
 
 -- To introduce `SrcType`, we simply feed one line at a time and look at the first few bytes.
-parseTySrc :: String -> TypedSrc
-parseTySrc str
+parseTySrc :: Int -> String -> TypedSrc
+parseTySrc i str
 -- If the line begins in a line-comment followed by space (not tab), then it's part of the documentation.
 -- Note that this must be at the start of the line, **not** after some spaces.
-  | indicator `isPrefixOf` str = TySrc Docs $ (drop $ length indicator) str
+  | indicator `isPrefixOf` str = TySrc i Docs $ (drop $ length indicator) str
 -- Anything else is treated as code, including blank lines.
-  | otherwise = TySrc Code str
+  | otherwise = TySrc i Code str
   -- TODO make this indicator configurable
   where
   indicator = "-- "
@@ -80,12 +89,15 @@ parseTySrc str
 groupSrc :: [TypedSrc] -> [TypedSrc]
 groupSrc srclines = srclines
   & groupBy ((==) `on` (.ty))
-  & map (\ys -> TySrc (unsafeHead ys).ty (unlines $ map (.txt) ys))
+  & map (\ys ->
+    let hd = unsafeHead ys
+    in  TySrc hd.startLine hd.ty (unlines $ map (.txt) ys))
 
 -- Recall that the output format is intended to place documentation side-by-side with its corresponding code.
 -- Here we pair up a documentation block with the following code block.
 data SrcPair = SrcPair
   { docs :: String
+  , codeStartLine :: Int
   , code :: String
   }
 
@@ -108,15 +120,18 @@ pairSrc = \case
   loop :: [TypedSrc] -> [SrcPair]
   loop (a : b : rest)
     | a.ty == Docs, b.ty == Code
-      = SrcPair a.txt b.txt : loop rest
+      = SrcPair a.txt b.startLine b.txt : loop rest
 -- We might get some code that has no associated documentation, though. (At the start of the file.)
+  loop (a : rest)
     | a.ty == Code
-      = SrcPair "" a.txt : loop (b : rest)
+      = SrcPair "" a.startLine a.txt : loop rest
 -- Likewise, we might have documentation with no following code. (At the end of a file, so we terminate.)
   loop [a]
     | a.ty == Docs
-      = SrcPair a.txt "" : []
+      = SrcPair a.txt a.startLine "" : [] -- FIXME this is the start line of the docs, but I think I could figure out the line past the end of the file
 -- The loop terminates without fanfare.
   loop [] = []
--- We should never run into a shebang type.
-  loop (a : _) | a.ty == Shebang = errorWithoutStackTrace "internal error - unexpected shebang block"
+-- We should never run into a shebang type, or any other combo of focs and code.
+  loop (a : _) | a.ty == Shebang = errorWithoutStackTrace "internal error - pairing found unexpected shebang block"
+  loop (a : b : _) = errorWithoutStackTrace $ "internal error - pairing found " <> show a.ty <> " " <> show b.ty
+  loop (a : _) = errorWithoutStackTrace $ "internal error - pairing found " <> show a.ty <> " <none>"
