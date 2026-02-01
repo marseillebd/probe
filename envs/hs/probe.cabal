@@ -22,10 +22,6 @@ common prelude
       , containers
       , text
     default-language: Haskell2010
-    default-extensions:
-      LambdaCase
-      OverloadedRecordDot
-      OverloadedStrings
 
 executable probe
     import: prelude
