@@ -29,4 +29,6 @@ executable probe
     import: prelude
     main-is: Main.hs
     other-modules: Util
+    build-depends:
+      optparse-applicative
     hs-source-dirs: .
