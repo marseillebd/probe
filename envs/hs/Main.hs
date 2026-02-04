@@ -9,7 +9,7 @@ module Main where
 
 import Util
 
-import Data.List (isPrefixOf, groupBy)
+import Data.List (isPrefixOf, groupBy, intercalate)
 import Data.Function ((&), on)
 
 import qualified Data.ByteString as BS
@@ -38,8 +38,9 @@ main = do
         & groupSrc
         & pairSrc
   let outdir = "qd"
-  -- FIXME remove the outdir first
+  rmdir_rf outdir
   mkdir_p outdir
+  -- write separated file parts to individual files
   maybeM_ results.shebang $ \sb -> do
     writeFile (outdir </> "000001.shebang.qd") sb
   forM_ results.rows $ \pair -> do
@@ -47,6 +48,86 @@ main = do
         seqStr = drop (length lineStr) "000000" <> lineStr -- six digits actually allows line numbers to be sorted write up to seven 9s
     writeFile (outdir </> seqStr <.> "docs.qd") pair.docs
     writeFile (outdir </> seqStr <.> "code.qd") pair.code
+  -- Merge into a single, basic html file
+  withHtml $ do
+    case (results.shebang, head results.rows) of
+      (sbish, Just hd) -> do
+        withDocHtml hd.docs
+        withCodeHtml sbish hd.codeStartLine hd.code
+      (Just sb, Nothing) -> do
+        withDocHtml ""
+        withCodeHtml (Just sb) 2 ""
+      (Nothing, Nothing) -> pure ()
+    forM_ (drop 1 results.rows) $ \pair -> do
+      withDocHtml pair.docs
+      withCodeHtml Nothing pair.codeStartLine pair.code
+
+withHtml :: IO () -> IO ()
+withHtml action = do
+  putStrLn startHtml
+  action
+  putStrLn endHtml
+  where
+
+  startHtml = """
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset=utf-8>
+      <style>
+  """ ++ css ++ """
+      </style>
+      <script>
+  """ ++ js ++ """
+      </script>
+    </head>
+    <body>
+      <div id=literate-content>
+  """
+
+  endHtml :: String
+  endHtml = """
+      </div>
+    </body>
+  </html>
+  """
+
+  css = """
+  #literate-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #literate-content { counter-reset: line; }
+  #literate-content > div > code > pre:before {
+    counter-increment: line;
+    content: counter(line);
+  }
+
+  #literate-content details {
+    margin-left: 1em;
+  }
+  """
+
+  js = ""
+
+withDocHtml :: String -> IO ()
+withDocHtml inner = do
+  putStrLn "<div><pre>"
+  putStrLn $ escapeHtml inner
+  putStrLn "</pre></div>"
+
+withCodeHtml :: Maybe String -> Int -> String -> IO ()
+withCodeHtml sbish lno inner = do
+  maybeM_ sbish $ \sb -> do
+    putStrLn "<div><code>"
+    putStr $ "<pre>" ++ escapeHtml sb ++ "</pre>"
+    putStrLn "</div></code>"
+  putStrLn "<div><code>"
+  putStr $ "<span style=\"counter-set: line " ++ show (lno - 1) ++";\"></span>"
+  forM_ (lines inner) $ \l -> do
+    putStr $ "<pre>" ++ escapeHtml l ++ "</pre>"
+  putStrLn "</div></code>"
 
 -- # Parsing
 
@@ -72,12 +153,13 @@ parseTySrc :: Int -> String -> TypedSrc
 parseTySrc i str
 -- If the line begins in a line-comment followed by space (not tab), then it's part of the documentation.
 -- Note that this must be at the start of the line, **not** after some spaces.
-  | indicator `isPrefixOf` str = TySrc i Docs $ (drop $ length indicator) str
+  | (indicator ++ " ") `isPrefixOf` str = TySrc i Docs $ (drop $ 1 + length indicator) str
+  | indicator == str = TySrc i Docs ""
 -- Anything else is treated as code, including blank lines.
   | otherwise = TySrc i Code str
   -- TODO make this indicator configurable
   where
-  indicator = "-- "
+  indicator = "--"
 
 -- ## Input Grouping
 
@@ -136,3 +218,14 @@ pairSrc = \case
   loop (a : _) | a.ty == Shebang = errorWithoutStackTrace "internal error - pairing found unexpected shebang block"
   loop (a : b : _) = errorWithoutStackTrace $ "internal error - pairing found " <> show a.ty <> " " <> show b.ty
   loop (a : _) = errorWithoutStackTrace $ "internal error - pairing found " <> show a.ty <> " <none>"
+
+-- Function to escape HTML special characters
+escapeHtml :: String -> String
+escapeHtml = concatMap escapeChar
+  where
+  escapeChar '<' = "&lt;"
+  escapeChar '>' = "&gt;"
+  escapeChar '&' = "&amp;"
+  escapeChar '"' = "&quot;"
+  escapeChar '\'' = "&apos;"
+  escapeChar c = [c]  -- Return the character unchanged
