@@ -8,6 +8,9 @@ class C89TypeSYM a where
   cint :: a
   cchar :: a
 
+class C99TypeSYM a where
+  cint8 :: a
+
 --------------------------
 ------ Interpreters ------
 --------------------------
@@ -19,6 +22,9 @@ render = unR
 instance C89TypeSYM (RenderC String) where
   cint = pure "int"
   cchar = pure "char"
+
+instance C99TypeSYM (RenderC String) where
+  cint8 = pure "int8_t" -- TODO include stdint
 
 ------ Kind Checking ------
 

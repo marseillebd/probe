@@ -18,8 +18,8 @@ import qualified Data.Text as T
 main :: IO ()
 main = do
   putStrLn $ I.unR $ do
-    I.rCType I.CInt
+    I.rCType I.CInt8
   print $ I.unKC $ do
     I.kindCheck I.CInt
-  putStrLn $ F.render $ F.cint
+  putStrLn $ F.render $ F.cint8
   print $ F.kindCheck $ F.cint

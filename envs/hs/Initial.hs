@@ -1,21 +1,19 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Initial where
 
-data CType
-  = CInt
-  | CChar
+data CStd = C89 | C99
+class InC99 (std :: CStd) where
+instance InC99 C89 where
+instance InC99 C99 where
 
-type Name = String -- TODO
-
-data File = File
-  { dataDecls :: [DataDecl]
-  }
-
-data DataDecl = DataDecl
-  { ddeclType :: CType
-  , ddeclName :: Name
-}
+data CType std where
+  CInt :: CType C89
+  CChar :: CType C89
+  CInt8 :: CType C99
 
 --------------------------
 ------ Interpreters ------
@@ -31,9 +29,10 @@ instance Applicative RenderC where
 instance Monad RenderC where
   getX >>= k = k $ unR getX
 
-rCType :: CType -> RenderC String
+rCType :: (InC99 std) => CType std -> RenderC String
 rCType CInt = pure "int"
 rCType CChar = pure "char"
+rCType CInt8 = pure "int8_t"
 
 ------ Kind Checking ------
 
@@ -53,6 +52,6 @@ instance Applicative KindCheck where
 instance Monad KindCheck where
   getX >>= k = k $ unKC getX
 
-kindCheck :: CType -> KindCheck CKind
+kindCheck :: CType C89 -> KindCheck CKind
 kindCheck CInt = pure $ Known 4 4
 kindCheck CChar = pure $ Known 1 1
