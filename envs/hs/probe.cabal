@@ -30,5 +30,5 @@ executable probe
     main-is: Main.hs
     other-modules: Util
     build-depends:
-      optparse-applicative
+      -- optparse-applicative
     hs-source-dirs: .
