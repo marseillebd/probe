@@ -14,7 +14,7 @@ extra-doc-files:    CHANGELOG.md
 
 common prelude
     ghc-options:
-      -Wall
+      -Wall -fwarn-unticked-promoted-constructors
     build-depends:
       , array
       , base
@@ -22,6 +22,7 @@ common prelude
       , containers
       , directory
       , filepath
+      , mtl
       , text
     default-language: Haskell2010
 

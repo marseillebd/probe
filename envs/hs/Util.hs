@@ -5,8 +5,13 @@ module Util
   -- * Data Structures
   , ByteString, Text
   , Map
+  -- ** Tuples
+  , swap
+  -- ** Lists
+  , intercalate
   -- * Functions, Functors, &c
   , on, (&), (<&>)
+  , for
   -- * Control Flow
   , maybeM_, forM, forM_
   -- * Shell-type Shii
@@ -24,9 +29,14 @@ import Control.Monad (void, forM, forM_)
 import Data.ByteString (ByteString)
 import Data.Function ((&), on)
 import Data.Functor ((<&>))
+import Data.List (intercalate)
 import Data.Map (Map)
 import Data.Text (Text)
+import Data.Traversable (for)
 import System.FilePath ((</>), (<.>), (-<.>))
+
+swap :: (a, b) -> (b, a)
+swap (a, b) = (b, a)
 
 head :: [a] -> Maybe a
 head [] = Nothing
