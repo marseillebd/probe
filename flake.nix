@@ -34,7 +34,7 @@
       '';
     });
 
-    makeheaders = pkgs.callPackage ./makeheaders.nix {};
+    makeheaders = pkgs.callPackage ./envs/c/vendor/makeheaders/makeheaders.nix {};
 
     tooling.utils = with pkgs; [
       silver-searcher ripgrep # TODO evaluate which I like better
