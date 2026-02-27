@@ -1,0 +1,20 @@
+default:
+  just --list
+
+# Default build: the library and executable.
+[group: 'build']
+build: build-lib build-exe
+
+# Build the library as an object file (I'm assuming there's just one)
+[group: 'build']
+build-lib:
+  clang -I vendor -std=c23 -fdefer-ts -c lib.c
+
+# Build the executable (I'm assuming there's just one)
+[group: 'build']
+build-exe: build-lib
+  clang -I vendor -std=c23 -fdefer-ts main.c lib.o -o main
+
+# Run the executable (I'm assuming there's just one)
+run: build-exe
+  ./main

@@ -44,6 +44,7 @@
       rlwrap
       tree
       just
+      graphviz
     ];
 
     tooling.plaintext = with pkgs; [
@@ -61,6 +62,7 @@
       gcc15 # even the latest (Jan 2026) gcc doesn't have the defer patch shipped
       # it might be getting close, thouogh: https://gcc.gnu.org/pipermail/gcc-patches/2025-August/691465.html
       unstable.clang_22
+      doxygen
       makeheaders
     ];
 
