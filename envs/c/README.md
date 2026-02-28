@@ -1,5 +1,52 @@
 # C Probe
 
+C is an awful language unless you've already assembled/built yourself an ecosystem.
+
+## What have I learned?
+
+C code can't even developed without a build system.
+There's no point developing any C code unless I have a rigorous method for code documentation.
+Finally, having the LSP not understand the build compromises my ability to edit the code.
+
+Currently, I have a basic build system, but I know it needs to be pushed further.
+I've gotten Doxygen to do a hello-world, but I need to configure it better.
+Major TODOs:
+- [x] add doxygen to justfile
+- [ ] configure clang LSP
+- [ ] build archives for static library distribution
+- [ ] system to build with static linkage
+- [ ] document my util library with doxygen
+- [ ] figure out documentation for vendored libraries
+- [ ] configure doxygen
+- [ ] configure code styling (clang-format, and anything else)
+- [ ] document naming conventions:
+    types should be UpCamel, locals and functions lowerCamel, dunno about global variables.
+    there shoulld be documented abbreviations (buf = buffer, sl = slice, iter = iterator, &c, even the basic ones)
+- [ ] setup Doxygen for both api docs and developer docs
+more minor:
+- [ ] a system for identifying the build
+    (say a date+time+nonce, or a hash of the (preprocessed?) input)
+    (version defines for all the libraries and whatnot)
+- [ ] how the heck do I really manage builds on/for other targets/platforms?
+    (sure, arch+os, but what about architecture extensions?, or other system libs like posix or gmp?, or drivers like opengl vs vulkan?, or just not even having the cstdlibe or being baremetal?, and so on)
+
+
+
+Misc:
+- reserved identifiers:
+    `/__.*/` and `_[A-Z].*` are reserved in all contexts (for use by the standard) [see][confluence-reserved-ids].
+    `_.*` are reserved for identifiers with file scope (presumably for stdlib implementors) [see][confluence-reserved-ids].
+    "potentially reserved identifiers" are hard to spot [see][wg14n2572].
+    - [ ] TODO follow up on potentially reserved identifiers
+- defer statements:
+    Clang 22 has support for them with the `-fdefer-ts` flag.
+    They can be simulated in GCC 8+ using inner functions and the cleanup attribute.
+- alignment of malloc'd pointers:
+    they are aligned to the "fundamental alignment", which is equal to `alignof(max_align_t)`.
+
+[confluence-reserved-ids]: https://wiki.sei.cmu.edu/confluence/spaces/c/pages/87152308/DCL37-C.+Do+not+declare+or+define+a+reserved+identifier
+[wg14n2572]: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2572.pdf
+
 What are the processes I need/want for coding in C?
 - ergonomics: generate headers
 - builds: static lib, dynamic lib, executable

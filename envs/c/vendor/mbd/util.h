@@ -53,6 +53,10 @@
 // we usualy want to use this token paster instead, even though it looks like it shouldn't do anything.
 #define TOKEN_PASTE(t1, t2) TOKEN_PASTE_DIRECT(t1, t2)
 
+// Similarly, sytingizing is fraught.
+#define STR_DIRECT(x) #x
+#define STR(x) STR_DIRECT(x)
+
 // # Defer
 //
 // The ["defer" technical spec][defer-ts] (TS 25755, aka WG14 Working Draft N3734)

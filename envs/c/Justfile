@@ -1,5 +1,11 @@
+###### Explore ######
+
+# List available commands
+[group: 'explore']
 default:
-  just --list
+  @just --list --unsorted
+
+###### Build ######
 
 # Default build: the library and executable.
 [group: 'build']
@@ -15,6 +21,21 @@ build-lib:
 build-exe: build-lib
   clang -I vendor -std=c23 -fdefer-ts main.c lib.o -o main
 
+###### Document ######
+
+# Build documentation
+# (TODO api vs developer docs, also TODO 3rd-party lib documentation)
+[group: 'documentation']
+docs:
+  doxygen
+
+###### Test ######
+
+###### Execute ######
+
 # Run the executable (I'm assuming there's just one)
+[group: 'execute']
 run: build-exe
   ./main
+
+###### Distribute ######
