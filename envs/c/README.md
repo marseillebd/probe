@@ -2,7 +2,7 @@
 
 C is an awful language unless you've already assembled/built yourself an ecosystem.
 
-## What have I learned?
+# What have I learned?
 
 C code can't even developed without a build system.
 There's no point developing any C code unless I have a rigorous method for code documentation.
@@ -11,28 +11,83 @@ Finally, having the LSP not understand the build compromises my ability to edit 
 Currently, I have a basic build system, but I know it needs to be pushed further.
 I've gotten Doxygen to do a hello-world, but I need to configure it better.
 Major TODOs:
-- [x] add doxygen to justfile
-- [ ] configure clang LSP
+- [x] NEXT add doxygen to justfile
+- [ ] NEXT configure clang LSP
+  - [ ] NEXT test on a machine where the LSP is configured
 - [ ] build archives for static library distribution
 - [ ] system to build with static linkage
-- [ ] document my util library with doxygen
-- [ ] figure out documentation for vendored libraries
+- [ ] NEXT document my util library with doxygen
 - [ ] configure doxygen
-- [ ] configure code styling (clang-format, and anything else)
+  - [ ] NEXT developer docs
+  - [ ] figure out documentation for vendored libraries
+  - [ ] api docs
+- [ ] NEXT configure code styling (clang-format, and anything else)
 - [ ] document naming conventions:
     types should be UpCamel, locals and functions lowerCamel, dunno about global variables.
     there shoulld be documented abbreviations (buf = buffer, sl = slice, iter = iterator, &c, even the basic ones)
-- [ ] setup Doxygen for both api docs and developer docs
 more minor:
 - [ ] a system for identifying the build
     (say a date+time+nonce, or a hash of the (preprocessed?) input)
     (version defines for all the libraries and whatnot)
 - [ ] how the heck do I really manage builds on/for other targets/platforms?
     (sure, arch+os, but what about architecture extensions?, or other system libs like posix or gmp?, or drivers like opengl vs vulkan?, or just not even having the cstdlibe or being baremetal?, and so on)
+later majors:
+- [ ] research and create recipes for distribution: src-release, pre-compiled releases, packages (debian, arch, nix, alpine?, &c), dev packages (ie header and libraries), &c.
 
+## Flag Management
 
+Both gcc and clang support `@<file>` syntax to include arguments from a file (separated only by lines).
+This allows me to share the config options between `clangd` and the `clang` invocation in `just build`.
 
-Misc:
+Supposedly, the `@<file>` syntax is also supported inside an included file.
+That would be nice to separate out, say `dialect-{gcc,clang}`, `diagnostics`, `debug`, `release`, and so on.
+
+## LSP Support
+
+It seems clangd is the only reasonable game in town.
+Perhaps there are other LSPs, but they follow the clangd interface.
+
+Without configuration, my vim's basic LSP client won't produce good diagnostics.
+In particular, it doesn't understand where to find (project and vendored?) headers.
+Also, it will need to understand the language dialect, diagnostics, and perhaps also style.
+
+Where does this configuration go?
+- [Json Compilation Database][]
+  - `compile_flags.txt` holds cli options, one per line.
+    This is simple enough to hand-write, but is not flexible[^txt-flex].
+  - `compile_commands.json` is more annoying to hand-write, and the "specification" includes surprisingly little information.
+    So, flexible, not cannot be hand-written.
+    Opinions online overwhelmingly prefer this to `complile_flags.txt`, perhaps because they are thinking of large projects.
+- [`.clangd` Configuration][] Doesn't seem to come up much in discussions, but unfortunately is the top result when you search for "clangd configuration".
+  It seems like it's reasonably possible to hand-write.
+  There's not much info on how a `.clangd` file interacts with `compile_{flags.txt,commands.json}`, but I did find [this][clangd vs commandsjson].
+  Apparently, is can be nice to add extra diagnostics.
+
+How do I create these configs?
+The only one I really need to generate it seems is `compile_commands.json`.
+- For simple projects, there's [Bear][].
+- The most popular way is to use cmake to generate it.
+  Of course, cmake is a heavy tool, capable of generating lots of stuff, but that does make it useful when a project grows.
+  If you're using cmake already, it's a no-brainer, one-liner.
+  If not, there's a [hacky use of cmake to generate the commandsjson][], which seems simple enough.
+
+So, how am I configuring my LSP?
+- [ ] since I'm writing a basic probe, I'll just use a hand-written `compile-flags.txt`.
+  - I'm not sure it's that useful to explore [Bear][], but if I have issues with cmake, then perhaps.
+  - [ ] only later will I integrate cmake, which seems to be a popular tools for larger, more complex projects.
+- [ ] LATER there's [this](https://github.com/clangd/clangd/discussions/2489) which vaguely describes a setup at least one person finds useful
+
+[^txt-flex]: doesn't support different flags for different translation units, build profiles, or other parameters. \
+  This usually means it can't handle existing complex projects.
+
+[Json Compilation Database]: https://clang.llvm.org/docs/JSONCompilationDatabase.html
+[`.clangd` Configuration]: https://clangd.llvm.org/config
+[clangd vs commandsjson]: https://github.com/clangd/clangd/discussions/1985
+
+[Bear]: https://github.com/rizsotto/Bear
+[hacky use of cmake to generate the commandsjson]: https://gist.github.com/Strus/042a92a00070a943053006bf46912ae9
+
+### Misc
 - reserved identifiers:
     `/__.*/` and `_[A-Z].*` are reserved in all contexts (for use by the standard) [see][confluence-reserved-ids].
     `_.*` are reserved for identifiers with file scope (presumably for stdlib implementors) [see][confluence-reserved-ids].
@@ -46,6 +101,8 @@ Misc:
 
 [confluence-reserved-ids]: https://wiki.sei.cmu.edu/confluence/spaces/c/pages/87152308/DCL37-C.+Do+not+declare+or+define+a+reserved+identifier
 [wg14n2572]: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2572.pdf
+
+# Goals
 
 What are the processes I need/want for coding in C?
 - ergonomics: generate headers

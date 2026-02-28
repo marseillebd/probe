@@ -1,0 +1,8 @@
+-std=c23
+-fdefer-ts
+
+-Wall
+
+-Ivendor
+
+-g
