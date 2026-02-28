@@ -46,7 +46,7 @@ int main() {
   for (int i = 0; i < sizeof(entries)/sizeof(struct Entry); ++i) {
     struct Entry entry = entries[i];
     if (entry.s != 0) {
-      printf("%-*s | %3d %3d\n", max_name_len, entry.name, entry.s, entry.a);
+      printf("%-*s | %3d %3d\n", (int)max_name_len, entry.name, (int)entry.s, (int)entry.a);
     } else {
       printf("\n%s:\n", entry.name);
     }
