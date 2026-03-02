@@ -1,3 +1,7 @@
+srcdir := "src"
+appdir := "app"
+builddir := ".build"
+
 ###### Explore ######
 
 # List available commands
@@ -14,12 +18,12 @@ build: build-lib build-exe
 # Build the library as an object file (I'm assuming there's just one)
 [group: 'build']
 build-lib:
-  clang @compile_flags.txt -c lib.c
+  clang @compile_flags.txt -c {{srcdir}}/lib.c -o {{builddir}}/lib.o
 
 # Build the executable (I'm assuming there's just one)
 [group: 'build']
 build-exe: build-lib
-  clang @compile_flags.txt main.c lib.o -o main
+  clang @compile_flags.txt {{appdir}}/main.c {{builddir}}/lib.o -o {{builddir}}/main
 
 ###### Document ######
 
