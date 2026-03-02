@@ -31,6 +31,7 @@ build-exe: build-lib
 # (TODO api vs developer docs, also TODO 3rd-party lib documentation)
 [group: 'documentation']
 docs:
+  ./scripts/check_undocumented_files.bash
   doxygen
 
 ###### Test ######

@@ -16,7 +16,7 @@ Major TODOs:
 - [ ] NEXT document my util library with doxygen
 - [ ] configure doxygen
   - [x] NEXT developer docs
-  - [ ] NEXT hack a script to check whether files are documented
+  - [x] NEXT hack a script to check whether files are documented
   - [ ] figure out how doxygen preprocessing works, and what I need to set
   - [ ] remove a bunch of garbage settings from the doxyfile
   - [ ] api docs
