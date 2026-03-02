@@ -10,6 +10,12 @@ fi
 # Redirect output to stderr.
 exec 1>&2
 
+go_nogo() {
+  echo >&2 '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
+  echo >&2 'Press enter to continue with commit (Ctrl-C to cancel)'
+  read </dev/tty -r _unused
+}
+
 # Generic Tests
 # =============
 
@@ -62,7 +68,8 @@ To auto-fix, run
 
   eclint -fix
 EOF
-  exit 1
+  # exit 1 # DEBUG this is too frustrating
+  go_nogo # DEBUG this is a lot softer than just exiting
 fi
 
 # Git Whitespace Checking

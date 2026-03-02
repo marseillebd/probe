@@ -15,9 +15,12 @@ Major TODOs:
 - [x] NEXT configure clang LSP
 - [ ] NEXT document my util library with doxygen
 - [ ] configure doxygen
-  - [ ] NEXT developer docs
-  - [ ] figure out documentation for vendored libraries
+  - [x] NEXT developer docs
+  - [ ] NEXT hack a script to check whether files are documented
+  - [ ] figure out how doxygen preprocessing works, and what I need to set
+  - [ ] remove a bunch of garbage settings from the doxyfile
   - [ ] api docs
+  - [ ] figure out documentation for vendored libraries
 - [ ] NEXT configure code styling (clang-format, and anything else)
 - [ ] build archives for static library distribution
 - [ ] system to build with static linkage
@@ -100,6 +103,15 @@ References:
   Of import: running `NIX_DEBUG=1 clang ...` will dump info about what flags the wrapper introduces
 - [this PR](https://github.com/NixOS/nixpkgs/pull/120229) discusses the wrapper improvements made in clang-tools
 - [This thread](https://discourse.nixos.org/t/clang-clang-and-clangd-cant-find-headers-even-with-compile-commands-json/54657) has a lot of talk, but I'm not sure how much of it really gets into what's realy going on.
+
+## Doxygen
+
+If I set `EXTRACT_ALL = YES`, then warnings about undocumented things are suppressed.
+If I set it `NO`, then _nothing_ gets extracted, unless at least one file has some `@file` documentation.
+If I forget to create an `@file` doc in any (public) file, I don't get a warning about it.
+
+Doxygen produces an overwhelming abount of information on stdout by default.
+Set `QUIET = YES` unless you're debugging what work docygen is doing.
 
 ## Misc
 - reserved identifiers:

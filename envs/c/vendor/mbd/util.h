@@ -26,11 +26,7 @@
 #include <stdlib.h>
 
 // Some Explicit "Left-Blank" Syntax
-#ifdef __cplusplus
-  #define pass ((static_cast<void>)0)
-#else
-  #define pass ((void)0)
-#endif
+#define pass do {} while (0)
 
 // Printf Debugging
 #ifndef NDEBUG
