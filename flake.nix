@@ -66,6 +66,16 @@
       makeheaders
     ];
 
+    tooling.ocaml = with pkgs.ocamlPackages; [
+      ocaml
+      dune_3
+      utop
+      ocaml-lsp
+      # ocamlPackages.findlib # maybe necessary to find packages installed by nix
+    ] ++ (with pkgs.ocamlPackages; [ # ocaml packages
+      base core # these are Jane Street's standard library + an overlay. Recomended by Real-World Ocaml
+    ]);
+
   in
     {
 
@@ -75,6 +85,7 @@
           ++ tooling.utils
           ++ tooling.shells
           ++ tooling.c
+          ++ tooling.ocaml
         ;
       };
 

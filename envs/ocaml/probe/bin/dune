@@ -1,0 +1,7 @@
+(executable
+  (public_name probe)
+  (name main)
+  (libraries probe base stdio))
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
