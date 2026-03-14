@@ -61,10 +61,20 @@
     tooling.c = with pkgs; [
       gcc15 # even the latest (Jan 2026) gcc doesn't have the defer patch shipped
       # it might be getting close, thouogh: https://gcc.gnu.org/pipermail/gcc-patches/2025-August/691465.html
-      unstable.clang_22
+      unstable.llvmPackages_22.clang-tools unstable.clang_22 # apparently clang-tools has to come before clang??
       doxygen
       makeheaders
     ];
+
+    tooling.ocaml = with pkgs.ocamlPackages; [
+      ocaml
+      dune_3
+      utop
+      ocaml-lsp
+      # ocamlPackages.findlib # maybe necessary to find packages installed by nix
+    ] ++ (with pkgs.ocamlPackages; [ # ocaml packages
+      base core # these are Jane Street's standard library + an overlay. Recomended by Real-World Ocaml
+    ]);
 
   in
     {
@@ -75,6 +85,7 @@
           ++ tooling.utils
           ++ tooling.shells
           ++ tooling.c
+          ++ tooling.ocaml
         ;
       };
 

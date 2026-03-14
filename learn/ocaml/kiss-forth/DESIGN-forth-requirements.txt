@@ -1,0 +1,57 @@
+type byte = char
+type vmword = nativeint
+vmword_size : int (* number of bytes in the vm word *)
+
+sig Io
+  (* all I'm assuming is a front panel where a character/byte can be entered and another displayed *)
+  get : unit -> byte
+  put : byte -> unit
+
+  (* SoftWare Interrupt: the way to access any system resources beyond a front panel, like accessing a peripherals bus for storage or network *)
+  swi :: vmword (* pointer to request, replaced by response *) -> unit
+end
+
+sig Mem
+  (* functions that dereference memory panic when the dereference is out of range *)
+
+  push : vmword -> unit
+  pop : unit -> vmword
+
+  reserveHeap : vmword (* needed size *) -> vmword (* start address of reservation, with size at least what was passed in; zero if out of heap space *)
+  rd :: vmword (* address *) -> vmword
+  wr :: vmword (* value *) -> vmword (* address *) -> unit
+
+  rb :: vmword (* address *) -> vmword
+  wb :: vmword (* value *) -> vmword (* address *) -> unit
+end
+
+sig Alu
+  (* TODO *)
+end
+
+
+(*
+  I suppose the first pass could just accumulate values (defined constants, labels).
+  Then, the second pass operates on the concatenation of the first pass output with the first pass input.
+  Now, it has all information necessary to compute expressions when they appear, and directly generate the output.
+
+  I guess you could say: there's a hex1 which does not allow consts/labels to be used before definition, and a hex2 that _does_.
+  Then, first pass just translates hex2 code into a file which, in combo with that same hex2, becomes hex1.
+
+  Ugh, but this starts to sound like multiple io interfaces (for combining files or rewinding a file).
+  Well, input rewind is perhaps not too onerous?? Or we jsut say "f it, the user can combine the output stack with their input stack and run the program again."
+  I mean, I guess job requests might in fact have multiple input stacks anyway.
+
+  What sort of computing environment do I want to emulate anyway?
+  File system is usual today, but punch card readers were common, and some machines only have a front panel.
+  I guess I can't necessarily rely on a rewind option, or a filesystem.
+
+  So I'll break it into two problems: the machine and an operator (later operating system).
+  You send your decks to the operator and they hand you it and the deck back; realistically, this would just be unix stdin/stdout.
+  You don't interact directly with the machine, only with the operator, and neither does this machine need to operate with you.
+  "Operating system" calls are really just blinkenlights that the human operator can respond to; realistically, it'd be posix responding automatically.
+
+  However, now that I have this idea for what the machine does, I will (eventually) need an OS interface, and one considerably smaller than posix.
+  I think I can segment and minimize that interface pretty well, when I get to it.
+
+*)

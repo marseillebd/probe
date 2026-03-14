@@ -26,11 +26,7 @@
 #include <stdlib.h>
 
 // Some Explicit "Left-Blank" Syntax
-#ifdef __cplusplus
-  #define pass ((static_cast<void>)0)
-#else
-  #define pass ((void)0)
-#endif
+#define pass do {} while (0)
 
 // Printf Debugging
 #ifndef NDEBUG
@@ -53,9 +49,15 @@
 // we usualy want to use this token paster instead, even though it looks like it shouldn't do anything.
 #define TOKEN_PASTE(t1, t2) TOKEN_PASTE_DIRECT(t1, t2)
 
-// Similarly, sytingizing is fraught.
+// Similarly, stringizing is fraught.
 #define STR_DIRECT(x) #x
 #define STR(x) STR_DIRECT(x)
+
+// # Random Handy "Functions"
+
+// For things like  versin(x) = ver(sin(x)) = 1 - sin(x),
+// or ver(sqrt(x)) = 1 - sqrt(x), which shows up sometimes.
+#define ver(x) ((typeof x)1 - (x))
 
 // # Defer
 //

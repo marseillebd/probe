@@ -1,0 +1,10 @@
+(lang dune 3.18)
+
+(name kissforth)
+
+(generate_opam_files true)
+
+(package
+  (name kissforth)
+  (depends ocaml))
+

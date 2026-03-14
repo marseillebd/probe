@@ -12,16 +12,18 @@ Currently, I have a basic build system, but I know it needs to be pushed further
 I've gotten Doxygen to do a hello-world, but I need to configure it better.
 Major TODOs:
 - [x] NEXT add doxygen to justfile
-- [ ] NEXT configure clang LSP
-  - [ ] NEXT test on a machine where the LSP is configured
-- [ ] build archives for static library distribution
-- [ ] system to build with static linkage
+- [x] NEXT configure clang LSP
 - [ ] NEXT document my util library with doxygen
 - [ ] configure doxygen
-  - [ ] NEXT developer docs
-  - [ ] figure out documentation for vendored libraries
+  - [x] NEXT developer docs
+  - [x] NEXT hack a script to check whether files are documented
+  - [ ] figure out how doxygen preprocessing works, and what I need to set
+  - [ ] remove a bunch of garbage settings from the doxyfile
   - [ ] api docs
+  - [ ] figure out documentation for vendored libraries
 - [ ] NEXT configure code styling (clang-format, and anything else)
+- [ ] build archives for static library distribution
+- [ ] system to build with static linkage
 - [ ] document naming conventions:
     types should be UpCamel, locals and functions lowerCamel, dunno about global variables.
     there shoulld be documented abbreviations (buf = buffer, sl = slice, iter = iterator, &c, even the basic ones)
@@ -87,7 +89,31 @@ So, how am I configuring my LSP?
 [Bear]: https://github.com/rizsotto/Bear
 [hacky use of cmake to generate the commandsjson]: https://gist.github.com/Strus/042a92a00070a943053006bf46912ae9
 
-### Misc
+### Getting the LSP to work on NixOS
+
+I'm writing this on 2026-02-28, and while `clang` successfully found system headers, `clangd` was not.
+In Nix, `clang` is actually a wrapper script that injects a bunch of Nix-specific flags (including where to look for system headers).
+However, the clangd from the `clang` package was not likewise wrapped.
+Thankfully, the clang from the `clang-tools` package _is_ wrapped.
+I reportedly have to put `clang-tools` before `clang` in the package list, but no reason was given;
+    I suspect the ordering determines the ordering of the `PATH`, and thus which is used.
+
+References:
+- [This post](https://discourse.nixos.org/t/get-clangd-to-find-standard-headers-in-nix-shell/11268/13) walks through some debugging steps.
+  Of import: running `NIX_DEBUG=1 clang ...` will dump info about what flags the wrapper introduces
+- [this PR](https://github.com/NixOS/nixpkgs/pull/120229) discusses the wrapper improvements made in clang-tools
+- [This thread](https://discourse.nixos.org/t/clang-clang-and-clangd-cant-find-headers-even-with-compile-commands-json/54657) has a lot of talk, but I'm not sure how much of it really gets into what's realy going on.
+
+## Doxygen
+
+If I set `EXTRACT_ALL = YES`, then warnings about undocumented things are suppressed.
+If I set it `NO`, then _nothing_ gets extracted, unless at least one file has some `@file` documentation.
+If I forget to create an `@file` doc in any (public) file, I don't get a warning about it.
+
+Doxygen produces an overwhelming abount of information on stdout by default.
+Set `QUIET = YES` unless you're debugging what work docygen is doing.
+
+## Misc
 - reserved identifiers:
     `/__.*/` and `_[A-Z].*` are reserved in all contexts (for use by the standard) [see][confluence-reserved-ids].
     `_.*` are reserved for identifiers with file scope (presumably for stdlib implementors) [see][confluence-reserved-ids].
@@ -139,7 +165,7 @@ From what I've seen, no one has implemented C-syntax `defer` with C++.
 You _can_ use lambdas, but ppl are only defining `defer(...)` instead of `defer {...}`.
 In short, I don't think I can get C-with-someC++-and-also-C-like-defer.
 But what if I could?
-- Forward-declare the lambda, give a scope_guard-like unique pointer, then define the lambda after, like jgustadt's gnu C approach?
+- Forward-declare the lambda, give a `scope_guard`-like unique pointer, then define the lambda after, like jgustadt's gnu C approach?
   Turns out, lambdas can't really be given a type, and their declaration cannot be separate from their definition.
 - Try to use the gnu C syntax extensions in `g++` anyway?
   Nope, it looks like GCC doesn't allow nested functions in C++.
@@ -173,3 +199,17 @@ But what if I could?
     - [ ] utf8 buffer
     - [ ] ascii buffer
 - [ ] generic stream type
+- [ ] interfaces:
+    - first, the kinds of interfaces and data structures
+      - `-Arr` which is an immutable array in contiguous memory, prolly refcounted.
+      - `-Sl` which is a slice into an `Arr`.
+      - `-Buf` which are append-only, usually a da or xa. Convert to a stream or an array, or perhaps even a builder.
+      - `-Bldr` which is a builder: a tree of references to sized streams??
+      - `-S` which is a stream
+    - crossed with the sorts of elements
+      - `Byte` for bytes
+      - `Utf8` for utf-8 encoded unicode (backed by a `ByteX`)
+      - `Ascii` for 7-bit ascii
+    - and we have some special types, I think just streams:
+      - `LineS` for "plaintext" utf-8/ascii, with info about the line ending, possibly with position info
+      - `Utf8DecodeS` for iterating over the tagged sum of valid sequences of utf8 with utf8 encoding errors

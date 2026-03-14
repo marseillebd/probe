@@ -1,0 +1,14 @@
+(library
+  (name kissforth)
+  (foreign_stubs
+    (language c)
+    (names name_stubs))
+  (foreign_archives name))
+
+(data_only_dirs csrc)
+(rule
+  (deps (source_tree csrc))
+  (targets libname.a)
+  (action (no-infer (progn
+    (chdir csrc (run just))
+    (copy csrc/libname.a libname.a)))))
