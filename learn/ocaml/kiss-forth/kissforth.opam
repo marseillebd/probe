@@ -3,6 +3,7 @@ opam-version: "2.0"
 depends: [
   "dune" {>= "3.18"}
   "ocaml"
+  "ppx_sexp_conv"
   "odoc" {with-doc}
 ]
 build: [
