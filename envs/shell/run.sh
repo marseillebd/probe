@@ -8,9 +8,16 @@ main() {
   <input.txt \
     gzip   | tee input.txt.gz | \
     base64 | tee input.txt.gz.base64 | \
-    gzip   > input.txt.gz.base64.gz
-  ls -l input.txt* | awk '{print($5, "\t", $9);}'
+    gzip   >     input.txt.gz.base64.gz
+  <input.txt \
+    base64 | tee input.txt.base64 | \
+    gzip   >     input.txt.base64.gz
+  <input.txt \
+    urlencode | tee input.txt.url | \
+    gzip   >        input.txt.url.gz
 
+  # generate report
+  ls -l input.txt* | awk '{print($5, "\t", $9);}'
 }
 
 ###################
