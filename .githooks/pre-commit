@@ -10,10 +10,11 @@ fi
 # Redirect output to stderr.
 exec 1>&2
 
-go_nogo() {
+go_nogo() { # this is a lot less frustrating than just `exit 1`
   echo >&2 '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
   echo >&2 'Press enter to continue with commit (Ctrl-C to cancel)'
   read </dev/tty -r _unused
+  echo >&2 '======================================================'
 }
 
 # Generic Tests
@@ -52,14 +53,14 @@ fi
 if ! command -v eclint >/dev/null; then
   echo "eclint not found"
   echo "  install, or use the nix environment"
-  exit 1
-fi
-err=0
-for f in $(git diff-index --cached --name-only --diff-filter=AM "$against"); do
-  eclint "$f" || err=1
-done
-if [ "$err" = 1 ]; then
-  cat <<\EOF
+  go_nogo
+else
+  err=0
+  for f in $(git diff-index --cached --name-only --diff-filter=AM "$against"); do
+    eclint "$f" || err=1
+  done
+  if [ "$err" = 1 ]; then
+    cat <<\EOF
 Error: Attempt to commit code that does not abide by the editorconfig rules.
 
 This repository has a style guide, and I appreciate it being used.
@@ -68,8 +69,8 @@ To auto-fix, run
 
   eclint -fix
 EOF
-  # exit 1 # DEBUG this is too frustrating
-  go_nogo # DEBUG this is a lot softer than just exiting
+    go_nogo # DEBUG this is a lot softer than just exiting
+  fi
 fi
 
 # Git Whitespace Checking
@@ -105,7 +106,7 @@ The least we can do is scan for the the obvious traps before sharing broken code
 
 Please fix these issues before committing.
 EOF
-  exit 1
+  go_nogo
 fi
 
 # Format
@@ -125,9 +126,9 @@ Error: shell scripts do not pass shfmt formatting
 
 Please respect the style guidelines already present in this repository.
 
-Check the generated diffs, and youo may auto-apply fixes with:
+Check the generated diffs, and you may auto-apply fixes with:
 
   shfmt -w <files...>
 EOF
-  exit 1
+  go_nogo
 fi

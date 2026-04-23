@@ -4,7 +4,13 @@ set -eu
 ### Main ###
 
 main() {
-  echo hello
+  rm -f input.txt.*
+  <input.txt \
+    gzip   | tee input.txt.gz | \
+    base64 | tee input.txt.gz.base64 | \
+    gzip   > input.txt.gz.base64.gz
+  ls -l input.txt* | awk '{print($5, "\t", $9);}'
+
 }
 
 ###################
