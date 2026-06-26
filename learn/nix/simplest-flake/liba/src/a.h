@@ -26,7 +26,9 @@
 /// There's only so much I can do, but liba will try to do what it can.
 ///
 
+/////////////////////
 /// # Metalibrary
+/////////////////////
 ///
 /// Y'know, the boring stuff that lets user of the library identify it.
 ///
@@ -64,6 +66,32 @@
 /// These bits of syntax are not prefixed.
 /// Some of them are even shims (ok, just `defer` atm).
 ///
+
+/// #### Inline
+///
+/// C `inline` can be quite annoying.
+/// You'll likely need to emit exactly one linkable definition of an inline function in an executable.
+/// You'll define the inline function in a header which will likeyl be included multiple times.
+/// Some people use `static inline`, which will bloat the executable without a sufficiently smart toolchain.
+/// You could also use `extern inline` in the header, but then we still need a plain `inline` somewhere,
+///   but it needs _the exact same_ definition, which very meaningfully violates DRY.
+///
+/// I've decided to use an STB-/single-header-library-inspired approach.
+/// This header defines `external inline` functions, except when `A_IMPLEMENTATION` is defined,
+///   in which case the definitions become plain `inline`.
+/// This way, ordinary header use need not worry about eitting extra symbols,
+///   there will naturally be one file that emits the standalone function for linking.
+///   and no extra (unlinked) copies will be emitted.
+///
+/// Liba devs should use A__INLINE instead of `inline` or its variants.
+/// TODO actually, what if I have smth like A_INLINE which can be durned on by define A_EMIT_INLINE_DEFS?
+///
+
+#ifdef A_IMPLEMENTATION
+  #define A__INLINE inline
+#else
+  #define A__INLINE extern inline
+#endif
 
 /// #### `pass`
 ///
@@ -141,12 +169,6 @@
 #include <stdckdint.h>
 ///
 
-/// C has a vast array of integral types and related constants.
-/// `stdbool`, `limits`, `stdint`
-#include <stdbool.h>
-#include <limits.h>
-#include <stdint.h>
-
 /// A bunch of ordinary C is hidden behind includes.
 /// `stddef`, `stdalign`, `stdlib`
 #include <stddef.h>
@@ -157,11 +179,25 @@
 // - align{of,as}
 ///
 
+/// C has a vast array of integral types and related constants.
+/// `stdbool`, `limits`, `stdint`
+#include <stdbool.h>
+#include <limits.h>
+#include <stdint.h>
+///
+
+/// C is nothing without arrays.
+/// `string`, `stdlib` for malloc.
+#include <string.h>
+#include <stdlib.h>
+///
+
 /// It's so normal to do I/O everywhere in C, **sigh**.
 /// `stdio`, `inttypes`
 ///   esp for the `{PRI,SCN}{d,i,u,o,x}{{,LEAST,FAST}{8,16,32,64},MAX,PTR}` macros
 #include <stdio.h>
 #include <inttypes.h>
+///
 
 
 
@@ -247,7 +283,9 @@ typedef int32_t I32;
 typedef int64_t I64;
 typedef __int128 I128; // gcc-specific?
 
+//////////////////////////////
 /// # Strip Library Prefix
+//////////////////////////////
 ///
 /// You might notice that all definitions in this library are prefixed with `a_` or `A_`.
 /// Define `A_NOPREFIX` to expose these (in the API, not ABI) without this prefix.
@@ -255,18 +293,37 @@ typedef __int128 I128; // gcc-specific?
 ///
 
 #ifdef A_NOPREFIX
-  #define STR A_STR
-  #define TOKEN_PASTE A_TOKEN_PASTE
 
-  #define talloc a_talloc
-  #define tallocSave a_tallocSave
-  #define tallocReset a_tallocReset
+  #define STR          A_STR
+  #define TOKEN_PASTE  A_TOKEN_PASTE
+
+  #define talloc       a_talloc
+  #define tallocSave   a_tallocSave
+  #define tallocReset  a_tallocReset
+
+  #define Bytes         A_Bytes
+    #define mk_Bs       a_mk_Bs
+    #define lit_Bs      a_lit_Bs
+    #define spread_Bs   a_spread_Bs
+    #define spreadr_Bs  a_spreadr_Bs
+    #define BsfromCStr  a_BsfromCStr
+    #define cmp_Bs      a_cmp_Bs
+    #define eq_Bs       a_eq_Bs
+  #define Ascii                A_Ascii
+    #define AsciiFromBytes_Bs  a_AsciiFromBytes_Bs
+    #define cstrLen_Ascii      a_cstrLen_Ascii
+    #define AsciiToCStr        a_AsciiToCStr
+    #define AsciiToCStr_t      a_AsciiToCStr_t
+    #define AsciiToCStr_m      a_AsciiToCStr_m
+
 #endif
 
 /// Some definitions (ie configuration macros) do not have their prefix stripped.
 ///
 
+/////////////////////
 /// # Size Macros
+/////////////////////
 ///
 /// It feels silly, but these macros can be used after a number to scale it.
 /// Right now, I only need abouts of bytes, so that's what I'm going with.
@@ -281,7 +338,9 @@ typedef __int128 I128; // gcc-specific?
 #define GiB * 1024 MiB
 ///
 
+/////////////////////////////
 /// # Temporary Allocator
+/////////////////////////////
 ///
 /// A dynamic allocator off-stack that can be quickly cleared/reset.
 /// Meant for temporary data, like buffering a dynamic array or something.
@@ -320,7 +379,144 @@ typedef void A_Savepoint;
 A_Savepoint* a_tallocSave();
 void a_tallocReset(A_Savepoint* base);
 
+//////////////////////
+/// # Byte Strings
+//////////////////////
+///
+/// Nul-terminated strings have some clear issues.
+/// If the string cannot contain NUL or the zero byte.
+/// If the NUL is missing, buffer overreads occur.
+/// Creating a substring requires an allocation and copy.
+/// Operations as common as length are O(n).
+///
+/// Here, we take the "string view" approach: a length and pointer to string.
+/// This also means that these strings will usually be borrows of an underlying memory object,
+///   and that object should outlive all `Bytes` pointing into it.
+///
+/// Of course, the downside to using strings that aren't C strings is interoperation with system libraries.
+/// It _could_ be frustrating to constantly convert representations, _if_ you do more system calls than copmutation.
+/// Even then, every other language on the planet has alraedy wrapped these syscalls to accept input from pleasant string interfaces,
+///   and there's absolutely no reason C cuoldn't do the same.
+///
+/// Finally, note that this interface is _not_ intended for text, and certainly not unicode.
+/// It's a happy accident that you _could_ use this for ascii text directly,
+///   if you're willing to accept the type system not stopping codes 0x80 and above,
+///   and as long as you don't assume one-column-one-character.
+/// As for unicode, while this could be a backing type for utf8 and its variations,
+///   traversing and manipulating unicode text is a sophisticated operation that does not lend itself to an array-like interface.
+/// Consider something like streaming transformations and grapheme cluster cursors instead.
+///
+/// Just a note on the arguent order in this API: the count convensionally comes before the data.
+/// This mirrors the order in plain old existential types `exists (n :: Integer). Ptr (Array n Byte)`.
+/// Even in C, this mirrors the order expected in VLA parameters.
+///
+
+/// The type `A_Bytes` is a struct with `len` (length) and `str` (pointer to the string data) members.
+/// I'm hoping that most ABIs have a way to pass/return two-word data types in registers, since I expect this to be used by-value.
+///
+/// Ultimately, this type is intended as a mutable (but not growable) view/slice.
+/// It _may_ also contain an entire string, but I'm sure it will often contain substrings.
+typedef struct A_Bytes {
+  IPtr len;
+  Byte* str;
+} A_Bytes;
+///
+
+/// Introduction forms will be used often enough to warrant a little syntactic sugar.
+/// `a_mk_Bs` creates the struct from length and pointer, in that order.
+/// `a_lit_Bs` creates the struct from a literal string (and will not include the trailing NUL that C inserts and we do not need or want.
+#define a_mk_Bs(n, ptr) ((A_Bytes){ .len = (n), .str = (ptr) })
+#define a_lit_Bs(str) A_mk_Bs(sizeof(str) - 1, (str))
+///
+
+/// `A_spread_Bs` disassembles the Bytes struct to pass to C functions that take the pointer and count separately.
+/// It puts the length before the string, which matches the order of the `%.*s` printf format specifier.
+/// It also would atch libraries who take strings as VLAs, like `(int n, char[n] data)`.
+/// For interacting with libraries that take them in reverse order for whatever reason, use `A_spreadr_Bs`.
+#define a_spread_Bs(bytes) (bytes.len), (bytes.str)
+#define a_spreadr_Bs(bytes) (bytes.str), (bytes.len)
+///
+
+/// Conversions between `Bytes` and C-strings would be nice.
+/// Unfortunately, `Bytes` is able to hold NUL, which break c-strings, so we can't convert cleanly to C-strings.
+/// `A_fromCStr_Bs` _can_ convert C-strings to `Bytes`, however.
+/// If you _do_ have, say, an Ascii `Bytes` to convert to a C-string, that _is_ safe, but it's part of the Ascii module: `A_Ascii_toCStr`. TODO
+///
+/// Just like `Bs_mk`, `Bs_fromCStr` will not include the trailing Nul in the length.
+A__INLINE
+A_Bytes a_BsfromCStr(char* cstr) {
+  return a_mk_Bs(strlen(cstr), (Byte*)cstr);
+}
+///
+
+/// `a_cmp_Bs` compares two byte strings lexicographically (not locale-sensitive),
+///   returning `-1, 0, 1` for less-than, equal-to, and greater-than, respectively.
+/// `a_eq_Bs` tests two bytestrings for equality, and has a nicer interface in `if`-statements that only care about equality.
+bool a_cmp_Bs(A_Bytes a, A_Bytes b);
+bool a_eq_Bs(A_Bytes a, A_Bytes b);
+///
+
+/// TODO isPrefix, isSuffix, findInfix, findInfix_r, findByte, findByte_r.
+/// TODO handy syntax for infix/split iterating, trimming.
+/// TODO trim chars left/right/both. (zero-init means use the default whitespace one).
+/// TODO readline+-chomp.
+///
+/// TODO wrappers to interface with system calls that take strings
+/// TODO a similar module for generic arrays (but I gotta figure out how to API unboxed w/size and boxed)
+/// TODO a string builder module, so we can cat these and whatnot
+///
+/// TODO NOPREFIX
+///
+
+/// ## Ascii
+///
+/// This is just an alternate name for `Bytes`, but indicating the intention to hold Ascii text.
+///
+
+/// `A_Ascii` struct is an alias for `Bytes`
+typedef A_Bytes A_Ascii;
+
+/// `A_Ascii_fromBytes` will take the longest valid ascii prefix of `Bytes`.
+/// Normally, valid ascii codepoints are 0x0--0x7F inclusive, but since we're in C,
+///   we disallow NUL (the zero byte) from the string.
+///
+/// If the length of the returned `Ascii` is the same as the input `Bytes`,
+///   that indicates the entire `Bytes` was valid (C) Ascii.
+/// If less, then the length indicates how many bytes of the input were valid ascii,
+///   and the next byte of the input is non-ascii.
+A_Ascii a_AsciiFromBytes(A_Bytes bytes);
+
+/// While `Bytes` values cannot be safely converted to C-strings as duscussed earlier,
+///   `Ascii` values are guaranteed (given it was made via `Ascii_fromBytes` to avoid NUL, and can therefore be converted.
+/// This is done with `a_AsciiToCStr`.
+/// To avoid malloc-ing, it takes an in-parameter which must hold the input ascii's length + 1.
+/// To make it ever-so-slightly easier to compute, we also have `A_Ascii_cstrLen` to return the necessary size.
+A__INLINE
+size_t a_cstrLen_Ascii(A_Ascii str) { return str.len + 1; }
+void a_AsciiToCStr(char* restrict dst, A_Ascii src);
+///
+
+/// As a convenience, `a_AsciiToCStr_t` will allocate a destination buffer in the [temporary heap](#temporary-allocator)
+/// Likewize, `a_AsciiToCStr_m` will use `malloc`.
+A__INLINE
+char* a_AsciiToCStr_t(A_Ascii src) {
+  char* dst = a_talloc(a_cstrLen_Ascii(src));
+  assert(dst);
+  a_AsciiToCStr(dst, src);
+  return dst;
+}
+A__INLINE
+char* a_AsciiToCStr_m(A_Ascii src) {
+  char* dst = malloc(a_cstrLen_Ascii(src));
+  assert(dst);
+  a_AsciiToCStr(dst, src);
+  return dst;
+}
+///
+
+////////////////////
 /// # Miscellany
+////////////////////
 ///
 /// ## Debugging Helpers
 ///
@@ -359,7 +555,7 @@ void a_tallocReset(A_Savepoint* base);
 #define min(a, b) ({                                     \
   typeof(a) a__tmp_mina = (a);                           \
   typeof(a) a__tmp_minb = (b);                           \
-  a__tmp_mina <= a__tmp_minb ? a_tmp_mina : a__tmp_minb; \
+  a__tmp_mina <= a__tmp_minb ? a__tmp_mina : a__tmp_minb; \
 })
 #define clamp(lo, x, hi) ({ \
   typeof(x) _lo = (lo);     \

@@ -1,3 +1,4 @@
+#define A_IMPLEMENTATION
 #include "a.h"
 
 #include <stdint.h>
@@ -50,4 +51,40 @@ void a_tallocReset(A_Savepoint* base) {
 /// I don't expect anyone to screw it up, as long as they stick to keeping the savepoints inside a stack frame.
   assert((void*)tHeap <= base && base < (void*)tEnd);
   tNext = base;
+}
+
+///////////////////
+////// Bytes //////
+///////////////////
+
+bool a_cmp_Bs(A_Bytes a, A_Bytes b) {
+  size_t minlen = min(a.len, b.len);
+  int ord = strncmp((char*)a.str, (char*)b.str, minlen);
+  if (ord < 0) { return -1; }
+  else if (ord  > 0) { return 1; }
+  else {
+    if (a.len < b.len) { return -1; }
+    else if (a.len > b.len) { return 1; }
+    else { return 0; }
+  }
+}
+
+bool a_eq_Bs(A_Bytes a, A_Bytes b) {
+  if (a.len != b.len) { return false; }
+  return 0 == strncmp((char*)a.str, (char*)b.str, a.len);
+}
+
+A_Ascii a_AsciifromBytes(A_Bytes bytes) {
+  for (IPtr i = 0; i < bytes.len; i++) {
+    Byte b = bytes.str[i];
+    if ((b == 0) | (0x7F < b )) {
+      return a_mk_Bs(i, bytes.str);
+    }
+  }
+  return bytes;
+}
+
+void a_AsciiToCStr(char* restrict dst, A_Ascii src) {
+  memcpy(dst, src.str, src.len);
+  dst[src.len] = '\0';
 }
