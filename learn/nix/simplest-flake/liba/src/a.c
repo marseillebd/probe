@@ -74,9 +74,9 @@ bool a_eq_Bs(A_Bytes a, A_Bytes b) {
   return 0 == strncmp((char*)a.str, (char*)b.str, a.len);
 }
 
-A_Ascii a_AsciifromBytes(A_Bytes bytes) {
-  for (IPtr i = 0; i < bytes.len; i++) {
-    Byte b = bytes.str[i];
+A_Asciiz a_AsciifromBytes(A_Bytes bytes) {
+  for (iptr i = 0; i < bytes.len; i++) {
+    byte b = bytes.str[i];
     if ((b == 0) | (0x7F < b )) {
       return a_mk_Bs(i, bytes.str);
     }
@@ -84,7 +84,7 @@ A_Ascii a_AsciifromBytes(A_Bytes bytes) {
   return bytes;
 }
 
-void a_AsciiToCStr(char* restrict dst, A_Ascii src) {
+void a_CStrFromAsciiz(CStr restrict dst, A_Asciiz src) {
   memcpy(dst, src.str, src.len);
   dst[src.len] = '\0';
 }

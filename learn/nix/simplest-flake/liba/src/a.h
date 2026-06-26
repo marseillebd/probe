@@ -1,3 +1,19 @@
+/****************************************/
+/**************** TODO ******************/
+/****************************************/
+/*
+ * audit for abbreviations
+ *
+ * describe and audit for name template: `<lib prefix><flag prefix><name><type>`, where
+ * - lib prefix is `a_` for function(-like macro)s; `A_` for composite types, constant(-like macro)s, and nothing when `A_NOPREFIX` is defined
+ * - flag prefix is nothing, one lowercase letter, or multiple lowercase letters followed by an underscore
+ * - "name" is as already described
+ * - "type", if needed, is an underscore followed by the module or type name, since C doesn't do type-based overloading of any kind
+ */
+/****************************************/
+
+
+
 /// # Lib A
 ///
 /// My (Marseille Bouchard's) utility library for C.
@@ -46,10 +62,14 @@
 ///   If you aren't as worried about guessing compatibility, this is the machine identifier.
 ///   Since liba isn't as worried about compat as of writing, this is what we probably want for filtering versions programmatically.
 ///
+#define A_VERSION_PROJECT 1
 #define A_VERSION_MAJOR 0
 #define A_VERSION_MINOR 0
-#define A_VERSION_PATCH 1
-#define A_VERSION "1.0.0.1-alpha"
+#define A_VERSION_PATCH 2
+#define A_VERSION ( \
+  A_VERSION_PROJECT "." A_VERSION_MAJOR "." A_VERSION_MINOR "." A_VERSION_PATCH \
+  "-alpha" \
+)
 #define A_RELEASE 20260620
 
 /// ## Dialect
@@ -174,6 +194,7 @@
 #include <stddef.h>
 // - NULL
 // - size_t, ptrdiff_t, max_align_t
+// - ssize_t comes from unitstd
 // - offsetof(type, member)
 #include <stdalign.h>
 // - align{of,as}
@@ -199,6 +220,14 @@
 #include <inttypes.h>
 ///
 
+/// I may as well accept POSIX as "portable".
+/// A thte is point the only holdouts are embedded systems (with good reason),
+///   and Windows (with no good reason, unless you count billionare greed).
+/// Well, liba isn't designed for embedded, and I refuse to bend the knee to corporate interests.
+///
+/// At the moment, I'm just including `unistd` wholesale, and I'll learn more tidbits about the API later.
+#include <unistd.h>
+///
 
 
 /// ### Recommended APIs
@@ -209,12 +238,16 @@
 /// ## Naming Conventions
 ///
 /// 1. Identifiers use camelCase; UpperCamel for types, lowerCamel for values.
-/// 2. Variations on a function (etc) may be indicated with a single-letter suffix after underscore.
-///    When multiple letters stack up, order them alphabetically.
+///    The exception is that concrete, unboxed, single-register types are lowerCamel.
+/// 2. Variations on a function, type, &c may be indicated with a single-letter prefix, like `uint` or `talloc`.
+///    Try not to stack up multiple letters, but if it happens, order them alphabetically, and separate them from the core name by an underscore.
 /// 3. Avoid abbreviations, unless they are common and mentioned in this section.
 ///    The single-letter function variants are technically exempt, but if there's a pattern for the function, then document it.
 /// 4. Any variable which holds a measurement (say of time, bytes, and so on) should be suffixed with the SI abbreviation for its unit after an underscore.
 ///    Examples: `n_bytes`, `deltaTime_us`, `speed_kph`, `acceleration_m_per_s2`.
+/// 5. Conversion functions should be of the form `a_<Xyz>From<Abc>`.
+///    That's longer that `To` or `2`, but it puts the target (most important?) type first.
+///
 
 /// ### Known Abbreviations
 ///
@@ -250,38 +283,73 @@
 /// The definitions here do _not_ use the `A_` prefix.
 ///
 
-/// - `Bit` for a single bit, stored in a byte.
+/// ### Numeric Data Types
+///
+/// Some are built-in, some use the awkward-to-type `_t` suffix, and some are just misnomers via history.
+/// Most don't abide by my naming conventions.
+/// Worst of all, many of the types that are often preferred are actually more difficult to type.
+///
+
+/// I've seen the argument that general use of unsigned types is a mistake.
+/// I'm honestly not sold completely; there are fundamental limitations to ergonomics of C (and by inheritance it's competitors).
+/// However, this _is_ C, so I'll give it a go.
+/// Mostly, signed types are like `int`, where unsignes are like `uint`.
+/// Where there's divergence from this trend, I'll call it out.
+///
+
+/// - `bit` for a single bit, stored in a byte.
 ///   Effectively C `bool`, but the name calls out boolean blindness.
-typedef bool Bit;
-/// - `Octet` is specifically 8 bits, unsigned. `char` is `CHAR_BITS >= 8` bits
-typedef uint8_t Octet;
-/// - `Byte` is an unsigned `char`, which may or my not be 8-bits, even though we can generally assume it is;
-///   I distinguish it from `Octet` mostly because I like being very clear with the reason behind my types.
-typedef unsigned char Byte;
+/// - `bool` is already an ordinay C type, but don't forget about boolean blindness!
+typedef bool bit;
+/// - `octet` is specifically 8 bits, unsigned. C's `char` is `CHAR_BITS >= 8` bits, and with implementation-defined signedness.
+typedef uint8_t octet;
+/// - `byte` is an unsigned `char`, which may or my not be 8-bits, even though we can generally assume it is;
+///   I distinguish it from `octet` mostly because I like being very clear with the reason behind my types.
+typedef unsigned char byte;
 
-/// - `Sz` is the (unsigned) result type of the `sizeof` operator, and often used for the sizes of arrays and other objects
-typedef size_t Sz;
-// typedef ssize_t ISz; // TODO this is apparently POSIX, but I'm not sure exactly what use it'd be
+/// - The notion of "size", like the maxium size of a memory object, varies between computers.
+///   Thus we use `usz`/`isz`/`ssz` for portability.
+///   I'm not entirely sold on signed size types, but I'm willing to give it a shot, and that's why I'm not preferring one to the other.
+///   The difference between `ssz` (`s` for signed) and `isz` is that
+///     `isz` is able to hold the signed difference between two pointers (ie, it's `ptrdiff_t`).
+///   Meanwhile, `ssz` comes from Posix, and holds either a positive size, or a `-1` as a sentinel (for eg errors).
+///   My guess is that this preserves the usual `u-` vs `i-` semantics, while `ssz` can still do its particular job,
+///     but really this depends on `ptrdiff_t` and `size_t` having the same number of bits.
+typedef size_t usz;
+typedef ptrdiff_t isz;
+typedef ssize_t ssz;
+///
 
-/// - `UPtr` and `IPtr` are integer types large enough to hold pointers, thus enabling advanced pointer arithmetic
-typedef uintptr_t UPtr;
-typedef intptr_t IPtr;
+/// - `uptr` and `iptr` are integer types large enough to hold pointers, thus enabling advanced pointer arithmetic.
+///   I honestly don't know which should be preferred, so they have `u-` vs `i-` prefixes rather than favoring one.
+typedef uintptr_t uptr;
+typedef intptr_t iptr;
 
-/// - `PtrDiff` is the (signed) result of subtracting two pointers
-typedef ptrdiff_t PtrDiff;
+/// - `{int,uint}{8,16,32,64,128}` are all exact-width unsigned/signed integer types, with no defined endianness
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+typedef unsigned __int128 uint128; // gcc-specific?
 
-/// - `{U,I}{8,16,32,64,128}` are all exact-width unsigned/signed integer types, with no defined endianness
-typedef uint8_t U8;
-typedef uint16_t U16;
-typedef uint32_t U32;
-typedef uint64_t U64;
-typedef unsigned __int128 U128; // gcc-specific?
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef __int128 int128; // gcc-specific?
 
-typedef int8_t I8;
-typedef int16_t I16;
-typedef int32_t I32;
-typedef int64_t I64;
-typedef __int128 I128; // gcc-specific?
+/// TODO floating data types
+///
+
+/// ### Idiomatic C Types
+///
+/// At least some commonly-used C types are structural, meaning they don't specify their intent very well.
+/// This section provides synonyms that halp clarify intent.
+///
+
+/// - `CStr` is a `char*` intended as a nul-terminated string.
+typedef char* CStr;
+///
 
 //////////////////////////////
 /// # Strip Library Prefix
@@ -306,15 +374,15 @@ typedef __int128 I128; // gcc-specific?
     #define lit_Bs      a_lit_Bs
     #define spread_Bs   a_spread_Bs
     #define spreadr_Bs  a_spreadr_Bs
-    #define BsfromCStr  a_BsfromCStr
+    #define BsFromCStr  a_BsFromCStr
     #define cmp_Bs      a_cmp_Bs
     #define eq_Bs       a_eq_Bs
-  #define Ascii                A_Ascii
-    #define AsciiFromBytes_Bs  a_AsciiFromBytes_Bs
-    #define cstrLen_Ascii      a_cstrLen_Ascii
-    #define AsciiToCStr        a_AsciiToCStr
-    #define AsciiToCStr_t      a_AsciiToCStr_t
-    #define AsciiToCStr_m      a_AsciiToCStr_m
+  #define Asciiz                A_Asciiz
+    #define AsciizFromBytes_Bs  a_AsciizFromBytes_Bs
+    #define cstrLen_Asciiz      a_cstrLen_Asciiz
+    #define CStrFromAsciiz      a_CStrFromAsciiz
+    #define CStrFromAsciiz_t    a_CStrFromAsciiz_t
+    #define CStrFromAsciiz_m    a_CStrFromAsciiz_m
 
 #endif
 
@@ -417,8 +485,8 @@ void a_tallocReset(A_Savepoint* base);
 /// Ultimately, this type is intended as a mutable (but not growable) view/slice.
 /// It _may_ also contain an entire string, but I'm sure it will often contain substrings.
 typedef struct A_Bytes {
-  IPtr len;
-  Byte* str;
+  iptr len; // `iptr` to help manage alignment portably; ie this struct is always two pointer-sized values, which likely each fit in a register
+  byte* str;
 } A_Bytes;
 ///
 
@@ -439,13 +507,14 @@ typedef struct A_Bytes {
 
 /// Conversions between `Bytes` and C-strings would be nice.
 /// Unfortunately, `Bytes` is able to hold NUL, which break c-strings, so we can't convert cleanly to C-strings.
-/// `A_fromCStr_Bs` _can_ convert C-strings to `Bytes`, however.
-/// If you _do_ have, say, an Ascii `Bytes` to convert to a C-string, that _is_ safe, but it's part of the Ascii module: `A_Ascii_toCStr`. TODO
+/// `A_BytesFromCStr` _can_ convert C-strings to `Bytes`, however.
+/// If you _do_ have, say a nul-terminated ascii `Bytes` that you need as a `CStr`,
+///   see the `Asciiz` module, where you can create and convert an `Asciiz` type (either safely or cheaply).
 ///
-/// Just like `Bs_mk`, `Bs_fromCStr` will not include the trailing Nul in the length.
+/// Just like `mk_Bs`, `BytesFromCStr` will not include the trailing Nul in the length.
 A__INLINE
-A_Bytes a_BsfromCStr(char* cstr) {
-  return a_mk_Bs(strlen(cstr), (Byte*)cstr);
+A_Bytes a_BytesFromCStr(CStr cstr) {
+  return a_mk_Bs((iptr)strlen(cstr), (byte*)cstr);
 }
 ///
 
@@ -470,46 +539,47 @@ bool a_eq_Bs(A_Bytes a, A_Bytes b);
 
 /// ## Ascii
 ///
-/// This is just an alternate name for `Bytes`, but indicating the intention to hold Ascii text.
+/// This is just an alternate name for `Bytes`, but indicating the intention to hold nul-terminated Ascii text.
+/// But, this new name comes along with intention, and some helper functions.
 ///
 
-/// `A_Ascii` struct is an alias for `Bytes`
-typedef A_Bytes A_Ascii;
+/// `A_Asciiz` struct is an alias for `Bytes`
+typedef A_Bytes A_Asciiz;
 
-/// `A_Ascii_fromBytes` will take the longest valid ascii prefix of `Bytes`.
+/// `a_AsciizFromBytes` will take the longest valid ascii prefix of `Bytes`.
 /// Normally, valid ascii codepoints are 0x0--0x7F inclusive, but since we're in C,
 ///   we disallow NUL (the zero byte) from the string.
 ///
-/// If the length of the returned `Ascii` is the same as the input `Bytes`,
-///   that indicates the entire `Bytes` was valid (C) Ascii.
+/// If the length of the returned `Asciiz` is the same as the input `Bytes`,
+///   that indicates the entire `Bytes` was valid nul-terminated Ascii.
 /// If less, then the length indicates how many bytes of the input were valid ascii,
 ///   and the next byte of the input is non-ascii.
-A_Ascii a_AsciiFromBytes(A_Bytes bytes);
+A_Asciiz a_AsciizFromBytes(A_Bytes bytes);
 
-/// While `Bytes` values cannot be safely converted to C-strings as duscussed earlier,
-///   `Ascii` values are guaranteed (given it was made via `Ascii_fromBytes` to avoid NUL, and can therefore be converted.
-/// This is done with `a_AsciiToCStr`.
+/// While `Bytes` values cannot be safely converted to C-strings as discussed earlier,
+///   `Asciiz` values are guaranteed (given it was made via `AsciizFromBytes` to avoid NUL, and can therefore be converted.
+/// This is done with `CStrFromAsciiz`.
 /// To avoid malloc-ing, it takes an in-parameter which must hold the input ascii's length + 1.
-/// To make it ever-so-slightly easier to compute, we also have `A_Ascii_cstrLen` to return the necessary size.
+/// To make it ever-so-slightly easier to compute, we also have `A_Asciiz` to return the necessary size.
 A__INLINE
-size_t a_cstrLen_Ascii(A_Ascii str) { return str.len + 1; }
-void a_AsciiToCStr(char* restrict dst, A_Ascii src);
+size_t a_cstrLen_Asciiz(A_Asciiz str) { return str.len + 1; }
+void a_CStrFromAsciiz(CStr restrict dst, A_Asciiz src);
 ///
 
-/// As a convenience, `a_AsciiToCStr_t` will allocate a destination buffer in the [temporary heap](#temporary-allocator)
-/// Likewize, `a_AsciiToCStr_m` will use `malloc`.
+/// As a convenience, `a_CStrFromAsciiz_t` will allocate a destination buffer in the [temporary heap](#temporary-allocator)
+/// Likewize, `a_CStrFromAsciiz_m` will use `malloc`.
 A__INLINE
-char* a_AsciiToCStr_t(A_Ascii src) {
-  char* dst = a_talloc(a_cstrLen_Ascii(src));
+CStr a_CStrFromAsciiz_t(A_Asciiz src) {
+  CStr dst = a_talloc(a_cstrLen_Asciiz(src));
   assert(dst);
-  a_AsciiToCStr(dst, src);
+  a_CStrFromAsciiz(dst, src);
   return dst;
 }
 A__INLINE
-char* a_AsciiToCStr_m(A_Ascii src) {
-  char* dst = malloc(a_cstrLen_Ascii(src));
+CStr a_CStrFromAsciiz_m(A_Asciiz src) {
+  CStr dst = malloc(a_cstrLen_Asciiz(src));
   assert(dst);
-  a_AsciiToCStr(dst, src);
+  a_CStrFromAsciiz(dst, src);
   return dst;
 }
 ///
