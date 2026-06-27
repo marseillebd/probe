@@ -1,3 +1,6 @@
+// Copyright 2026 - 2026, Marseille Bouchard
+// SPDX-Liense-Identifier: LGPL-3.0-or-later
+
 #define A_NOPREFIX 1
 #include "a.h"
 

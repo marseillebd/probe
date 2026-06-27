@@ -1,8 +1,6 @@
 Later
 -----
 
-- scripts to convert documentation to html&pdf
-- choose a license and apply spdx headers
 - build system enables link-time-optimization, so I don't feel bad about not providing feature flags
 - New helper macro for defining inline functions.
   Maybe like `INLINE(LIBNAME)` gets defined based on `LIBNAME_IMPLEMENTATION`.
@@ -12,10 +10,15 @@ Later
 - wrap OS interface to accept `Bytes`, `Asciiz`, and/or `Text` (unicode) where relevant
 - move header imports from a.h to a.c as much as possible
 - technique: can I use x-macros to compile pattern-amtching to switches?
+- technique: perhaps I define macros that can emit parts of `_Generic`, and then a c file just puts together the generic it needs
 
 
 v 1.0.0.2-alpha
 ---------------
+
+- TODO: audit for abbreviations
+- TODO: scripts to convert documentation to html&pdf
+- TODO: merge building scripts into bash functions
 
 - Changed naming convention format.
 - Added naming convention for conversions.
@@ -25,7 +28,7 @@ v 1.0.0.2-alpha
 - New module: `Bytes` aka `Bs` for (technically mutable) slices into byte strings.
 - New module: `Asciiz`, which is `Bytes` but with the intended restriction to ascii strings that can be nul-terminated (ie contain no NUL characters).
 - Added smoke tests using nix.
-
+- Added a license and applied spdx headers.
 
 v1.0.0.1-alpha
 --------------
