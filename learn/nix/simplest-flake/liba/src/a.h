@@ -57,7 +57,7 @@
   A_VERSION_PROJECT "." A_VERSION_MAJOR "." A_VERSION_MINOR "." A_VERSION_PATCH \
   "-alpha" \
 )
-#define A_RELEASE 20260620
+#define A_RELEASE 20260627
 
 /// ## Dialect
 ///
@@ -245,7 +245,7 @@
 ///   "Primitive" types (ie unboxed, register-size, concrete) use `lowerCamelCase`.
 ///   "Abstract" types (ie compound, layout hidden or subject to change) use `UpperCamelCase`.
 /// - The `lib prefix` is `a_` or `A_`, depending on the case convention of `Name`.
-///   Users can make the prefix optional in their sourcecode by defining `A_NOPREFIX`.
+///   Users can make the prefix optional in their sourcecode by defining [`A_NOPREFIX`](#strip-library-prefix).
 ///   Private interfaces which nonetheless must be in the header use an extra underscore, and never have their prefix stripped.
 /// - `flags` is meant to indicate variations on an interface.
 ///   For example, `fprintf` and `sprintf` as variations on `printf`,
@@ -272,12 +272,53 @@
 ///   but they shouldn't be compound, just boxed (eg `CStr`).
 ///
 
+/// ### Strip Library Prefix
+///
+/// Define `A_NOPREFIX` to expose most interfaces in this library without this prefix (in the API, not ABI).
+/// Eg `a_talloc` can now be written `talloc`, but `a_talloc` still exists and is what gets linked against.
+///
+
+#ifdef A_NOPREFIX
+
+  #define STR          A_STR
+  #define TOKEN_PASTE  A_TOKEN_PASTE
+
+  #define talloc       a_talloc
+  #define tallocSave   a_tallocSave
+  #define tallocReset  a_tallocReset
+
+  #define Bytes         A_Bytes
+    #define mk_bs       a_mk_bs
+    #define lit_bs      a_lit_bs
+    #define spread_bs   a_spread_bs
+    #define spreadr_bs  a_spreadr_bs
+    #define BsFromCStr  a_BsFromCStr
+    #define cmp_bs      a_cmp_bs
+    #define eq_bs       a_eq_bs
+  #define Asciiz             A_Asciiz
+    #define AsciizFromBytes  a_AsciizFromBytes
+    #define cstrLen_Asciiz   a_cstrLen_Asciiz
+    #define CStrFromAsciiz   a_CStrFromAsciiz
+    #define tCStrFromAsciiz  a_tCStrFromAsciiz
+    #define mCStrFromAsciiz  a_mCStrFromAsciiz
+
+#endif
+
+/// Some definitions (ie configuration macros) do not have their prefix stripped.
+///
+
 /// ### Known Abbreviations
 ///
 /// - `str`: string
 /// - `buf`: buffer
 /// - `len`: length
 /// - `cap`: capacity
+/// - `ptr`: pointer
+/// - `alloc`: allocate
+/// - `lit`: literal
+/// - `mk`: make, cf "new", "init"
+/// - `init`: initialize
+/// - TODO fini, del, clr
 
 /// ## Token Pasting and Stringizing
 
@@ -320,35 +361,57 @@
 /// Where there's divergence from this trend, I'll call it out.
 ///
 
-/// - `bit` for a single bit, stored in a byte.
-///   Effectively C `bool`, but the name calls out boolean blindness.
-/// - `bool` is already an ordinay C type, but don't forget about boolean blindness!
+/// ##### `bit`
+///
+/// For a single bit, stored in a byte.
+///  Effectively C `bool`, but the name calls out boolean blindness.
 typedef bool bit;
-/// - `octet` is specifically 8 bits, unsigned. C's `char` is `CHAR_BITS >= 8` bits, and with implementation-defined signedness.
+///
+/// ##### `bool`
+/// `bool` is already an ordinary C type, but don't forget about boolean blindness!
+/// Try [`bit`](#bit) or a self-describing enum instead.
+///
+/// ##### `octet`
+///
+/// An octet is specifically 8 bits, unsigned.
+/// C's `char` is `CHAR_BITS >= 8` bits, and with implementation-defined signedness.
 typedef uint8_t octet;
-/// - `byte` is an unsigned `char`, which may or my not be 8-bits, even though we can generally assume it is;
+///
+/// ##### `byte`
+/// A `byte` is an unsigned `char`, which may or my not be 8-bits, even though we can generally assume it is;
 ///   I distinguish it from `octet` mostly because I like being very clear with the reason behind my types.
+/// Also, C's `char` type---normally used to indicate bytes---has implementation-defined signedness, which just complicates everything.
+/// That said, you may need to cast `byte` to `char` sometimes to avoid compiler warnings.
 typedef unsigned char byte;
+///
 
-/// - The notion of "size", like the maxium size of a memory object, varies between computers.
-///   Thus we use `usz`/`isz`/`ssz` for portability.
-///   I'm not entirely sold on signed size types, but I'm willing to give it a shot, and that's why I'm not preferring one to the other.
-///   The difference between `ssz` (`s` for signed) and `isz` is that
-///     `isz` is able to hold the signed difference between two pointers (ie, it's `ptrdiff_t`).
-///   Meanwhile, `ssz` comes from Posix, and holds either a positive size, or a `-1` as a sentinel (for eg errors).
-///   My guess is that this preserves the usual `u-` vs `i-` semantics, while `ssz` can still do its particular job,
-///     but really this depends on `ptrdiff_t` and `size_t` having the same number of bits.
+/// ##### `isz`, `ssz`, `usz`
+/// The notion of "size", like the maxium size of a memory object, varies between computers.
+/// Thus we use these types for portability.
+///
+/// The difference between `ssz` (`s` for signed) and `isz` is that
+///   `isz` is able to hold the signed difference between two pointers (ie, it's `ptrdiff_t`).
+/// Meanwhile, `ssz` comes from Posix, and holds either a positive size, or a `-1` as a sentinel (for eg errors).
+/// My guess is that this preserves the usual `u-` vs `i-` semantics, while `ssz` can still do its particular job,
+///   but really this depends on `ptrdiff_t` and `size_t` having the same number of bits.
+///
+/// I'm not entirely sold on signed size types, but I'm willing to give it a shot,
+///   and that's why I'm not preferring one to the other.
 typedef size_t usz;
 typedef ptrdiff_t isz;
 typedef ssize_t ssz;
 ///
 
-/// - `uptr` and `iptr` are integer types large enough to hold pointers, thus enabling advanced pointer arithmetic.
-///   I honestly don't know which should be preferred, so they have `u-` vs `i-` prefixes rather than favoring one.
+/// ##### `iptr`, `uptr`
+/// These are integer types large enough to hold pointers, thus enabling advanced pointer arithmetic.
+/// I honestly don't know which should be preferred, so they have `u-` vs `i-` prefixes rather than favoring one.
 typedef uintptr_t uptr;
 typedef intptr_t iptr;
+///
 
-/// - `{int,uint}{8,16,32,64,128}` are all exact-width unsigned/signed integer types, with no defined endianness
+/// ##### Fixed-size integer types
+/// `{int,uint}{8,16,32,64,128}` are all exact-width signed/unsigned integer types, with no defined endianness.
+///
 typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
@@ -361,7 +424,7 @@ typedef int32_t int32;
 typedef int64_t int64;
 typedef __int128 int128; // gcc-specific?
 
-/// TODO floating data types
+/// ##### TODO floating data types
 ///
 
 /// ### Idiomatic C Types
@@ -370,46 +433,10 @@ typedef __int128 int128; // gcc-specific?
 /// This section provides synonyms that halp clarify intent.
 ///
 
-/// - `CStr` is a `char*` intended as a nul-terminated string.
+/// ##### `CStr`
+///
+/// This is a synonym for `char*`, but explicitly intended as a nul-terminated string.
 typedef char* CStr;
-///
-
-//////////////////////////////
-/// # Strip Library Prefix
-//////////////////////////////
-///
-/// You might notice that all definitions in this library are prefixed with `a_` or `A_`.
-/// Define `A_NOPREFIX` to expose these (in the API, not ABI) without this prefix.
-/// Eg `a_talloc` can now be written `talloc`, but `a_talloc` still exists and is linked against.
-///
-
-#ifdef A_NOPREFIX
-
-  #define STR          A_STR
-  #define TOKEN_PASTE  A_TOKEN_PASTE
-
-  #define talloc       a_talloc
-  #define tallocSave   a_tallocSave
-  #define tallocReset  a_tallocReset
-
-  #define Bytes         A_Bytes
-    #define mk_bs       a_mk_bs
-    #define lit_bs      a_lit_bs
-    #define spread_bs   a_spread_bs
-    #define spreadr_bs  a_spreadr_bs
-    #define BsFromCStr  a_BsFromCStr
-    #define cmp_bs      a_cmp_bs
-    #define eq_bs       a_eq_bs
-  #define Asciiz             A_Asciiz
-    #define AsciizFromBytes  a_AsciizFromBytes
-    #define cstrLen_Asciiz   a_cstrLen_Asciiz
-    #define CStrFromAsciiz   a_CStrFromAsciiz
-    #define tCStrFromAsciiz  a_tCStrFromAsciiz
-    #define mCStrFromAsciiz  a_mCStrFromAsciiz
-
-#endif
-
-/// Some definitions (ie configuration macros) do not have their prefix stripped.
 ///
 
 /////////////////////
@@ -437,7 +464,7 @@ typedef char* CStr;
 /// Meant for temporary data, like buffering a dynamic array or something.
 ///
 
-/// ## Config Macro: `A_TALLOC_SIZE`
+/// ##### `A_TALLOC_SIZE`
 ///
 /// Define `A_TALLOC_SIZE` to set the maximum number of bytes that can be held in temporary allocator.
 /// If not set, the default is 8MiB. I have no reason for this number.
@@ -446,17 +473,19 @@ typedef char* CStr;
 #endif
 ///
 
-/// ## `void* a_talloc(size_t nBytes)`
+/// ##### `talloc`
+///
+/// `void* a_talloc(size_t nBytes)`
+void* a_talloc(size_t nBytes);
 ///
 /// Allocate `nBytes` in the temporary allocator.
 /// Returns `NULL` if there's an error.
 ///
 /// All allocations are aligned to the fundamental alignment (ie `alignof(max_align_t)`).
 /// A zero-byte talloc is allowed, and its address will be distinct from any other talloc object (it will, ofc, use some memory).
-void* a_talloc(size_t nBytes);
 ///
 
-/// ## Save and Restore Temp Allocator
+/// #### Save and Restore Temp Allocator
 ///
 /// The functions `a_talloc{Save,Reset}` work in tandem.
 /// The save function returns an opaque handle (`A_Savepoint`), and the reset function accepts it.
@@ -466,9 +495,19 @@ void* a_talloc(size_t nBytes);
 /// a savepoint value may only be used once (by reset), but not be reused.
 /// Additional savepoints are also invalidated: when they were created between (runtime-wise) the creaation and usage of some other savepoint.
 ///
-typedef void A_Savepoint;
-A_Savepoint* a_tallocSave();
-void a_tallocReset(A_Savepoint* base);
+
+/// ##### `Savepoint`
+/// `typedef void* A_Savepoint`
+typedef void* A_Savepoint;
+///
+/// ##### `tallocSave`
+/// `A_Savepoint a_tallocSave()`
+A_Savepoint a_tallocSave();
+///
+/// ##### `tallocRestore`
+/// `void a_tallocReset(A_Savepoint base)`
+void a_tallocReset(A_Savepoint base);
+///
 
 //////////////////////////////
 /// # Byte Strings (`_bs`)
@@ -502,38 +541,62 @@ void a_tallocReset(A_Savepoint* base);
 /// Even in C, this mirrors the order expected in VLA parameters.
 ///
 
-/// The type `A_Bytes` is a struct with `len` (length) and `str` (pointer to the string data) members.
+/// #### Introduction and Elimination Forms
+/// ##### `Bytes`
+///
+/// ```
+/// typedef struct A_Bytes {
+///   iptr len;
+///   byte* str;
+/// } A_Bytes;
+/// ```
+typedef struct A_Bytes {
+  // `iptr` to help manage alignment portably;
+  // ie this struct is always two pointer-sized values, which likely each fit in a register
+  iptr len;
+  byte* str;
+} A_Bytes;
+///
 /// I'm hoping that most ABIs have a way to pass/return two-word data types in registers, since I expect this to be used by-value.
 ///
 /// Ultimately, this type is intended as a mutable (but not growable) view/slice.
 /// It _may_ also contain an entire string, but I'm sure it will often contain substrings.
-typedef struct A_Bytes {
-  iptr len; // `iptr` to help manage alignment portably; ie this struct is always two pointer-sized values, which likely each fit in a register
-  byte* str;
-} A_Bytes;
 ///
 
-/// Introduction forms will be used often enough to warrant a little syntactic sugar.
-/// `a_mk_bs` creates the struct from length and pointer, in that order.
-/// `a_lit_bs` creates the struct from a literal string (and will not include the trailing NUL that C inserts and we do not need or want.
+/// It's common enough to need to wrap or unwrap an existing `CStr`, so it warrants from syntactic sugar.
+///
+/// ##### `mk_bs`
+/// `a_mk_bs(len, ptr)` creates the struct from length and pointer, in that order.
 #define a_mk_bs(n, ptr) ((A_Bytes){ .len = (n), .str = (ptr) })
+///
+/// ##### `lit_bs`
+/// `a_lit_bs(strLiteral)` creates the struct from a literal string (and will not include the trailing NUL that C inserts and we do not need or want.
 #define a_lit_bs(str) a_mk_bs(sizeof(str) - 1, (str))
 ///
 
-/// `A_spread_bs` disassembles the Bytes struct to pass to C functions that take the pointer and count separately.
+/// ##### `spread_bs`
+/// `a_spread_bs(Bytes)` disassembles the Bytes struct to pass to C functions that take the pointer and count separately.
+///
 /// It puts the length before the string, which matches the order of the `%.*s` printf format specifier.
-/// It also would atch libraries who take strings as VLAs, like `(int n, char[n] data)`.
-/// For interacting with libraries that take them in reverse order for whatever reason, use `a_spreadr_bs`.
+/// It also would match libraries who take strings as VLAs, like `foo(int n, char[n] data)`.
+///
+/// `a_rspread_bs` is for interacting with libraries that take them in reverse order for whatever reason.
 #define a_spread_bs(bytes) (bytes.len), (bytes.str)
-#define a_spreadr_bs(bytes) (bytes.str), (bytes.len)
+#define a_rspread_bs(bytes) (bytes.str), (bytes.len)
 ///
 
-/// Conversions between `Bytes` and C-strings would be nice.
-/// Unfortunately, `Bytes` is able to hold NUL, which break c-strings, so we can't convert cleanly to C-strings.
-/// `A_BytesFromCStr` _can_ convert C-strings to `Bytes`, however.
-/// If you _do_ have, say a nul-terminated ascii `Bytes` that you need as a `CStr`,
+/// #### Conversions
+///
+/// Conversions back _and_ forth between `Bytes` and C-strings would be nice.
+/// Unfortunately, `Bytes` is able to hold NUL, which break C-strings, so we can't convert cleanly to C-strings.
+/// We can at least convert C-strings to `Bytes`, through [`mk_bs`](#mk_bs), but we also provide this operation in function form.
+///
+/// If you _do_ have, say, a nul-terminated ascii `Bytes` that you need as a `CStr`,
 ///   see the `Asciiz` module, where you can create and convert an `Asciiz` type (either safely or cheaply).
 ///
+/// ##### `BytesFromCStr`
+///
+/// `A_Bytes a_BytesFromCStr(CStr cstr)` converts a C-string to `Bytes`.
 /// Just like `mk_bs`, `BytesFromCStr` will not include the trailing Nul in the length.
 A__INLINE
 A_Bytes a_BytesFromCStr(CStr cstr) {
@@ -541,12 +604,21 @@ A_Bytes a_BytesFromCStr(CStr cstr) {
 }
 ///
 
-/// `a_cmp_bs` compares two byte strings lexicographically (not locale-sensitive),
+/// #### Comparison
+
+/// ##### `cmp_bs`
+/// `int a_cmp_bs(A_Bytes a, A_Bytes b)`
+int a_cmp_bs(A_Bytes a, A_Bytes b);
+///   compares two byte strings lexicographically (not locale-sensitive),
 ///   returning `-1, 0, 1` for less-than, equal-to, and greater-than, respectively.
-/// `a_eq_bs` tests two bytestrings for equality, and has a nicer interface in `if`-statements that only care about equality.
-bool a_cmp_bs(A_Bytes a, A_Bytes b);
-bool a_eq_bs(A_Bytes a, A_Bytes b);
 ///
+/// ##### `eq_bs`
+/// `bool a_eq_bs(A_Bytes a, A_Bytes b)`
+bool a_eq_bs(A_Bytes a, A_Bytes b);
+///   tests two bytestrings for equality, and has a nicer interface in `if`-statements that only care about equality.
+///
+
+/// #### Bytes TODO
 
 /// TODO isPrefix, isSuffix, findInfix, findInfix_r, findByte, findByte_r.
 /// TODO handy syntax for infix/split iterating, trimming.
@@ -557,19 +629,21 @@ bool a_eq_bs(A_Bytes a, A_Bytes b);
 /// TODO a similar module for generic arrays (but I gotta figure out how to API unboxed w/size and boxed)
 /// TODO a string builder module, so we can cat these and whatnot
 ///
-/// TODO NOPREFIX
-///
 
 /// ## Ascii (`_az`)
 ///
-/// This is just an alternate name for `Bytes`, but indicating the intention to hold nul-terminated Ascii text.
-/// But, this new name comes along with intention, and some helper functions.
+/// ##### `Asciiz`
+/// `typedef A_Bytes A_Asciiz`
+typedef A_Bytes A_Asciiz;
+///   is just a synonym for [`Bytes`](#byte-strings-_bs),
+///   but indicates the intention to hold nul-terminated Ascii text.
 ///
 
-/// `A_Asciiz` struct is an alias for `Bytes`
-typedef A_Bytes A_Asciiz;
-
-/// `a_AsciizFromBytes` will take the longest valid ascii prefix of `Bytes`.
+/// ##### `AsciizFromBytes`
+/// `A_Asciiz a_AsciizFromBytes(A_Bytes bytes)`
+A_Asciiz a_AsciizFromBytes(A_Bytes bytes);
+///   will take the longest valid ascii prefix of `Bytes`.
+///
 /// Normally, valid ascii codepoints are 0x0--0x7F inclusive, but since we're in C,
 ///   we disallow NUL (the zero byte) from the string.
 ///
@@ -577,20 +651,28 @@ typedef A_Bytes A_Asciiz;
 ///   that indicates the entire `Bytes` was valid nul-terminated Ascii.
 /// If less, then the length indicates how many bytes of the input were valid ascii,
 ///   and the next byte of the input is non-ascii.
-A_Asciiz a_AsciizFromBytes(A_Bytes bytes);
-
-/// While `Bytes` values cannot be safely converted to C-strings as discussed earlier,
-///   `Asciiz` values are guaranteed (given it was made via `AsciizFromBytes` to avoid NUL, and can therefore be converted.
-/// This is done with `CStrFromAsciiz`.
-/// To avoid malloc-ing, it takes an in-parameter which must hold the input ascii's length + 1.
-/// To make it ever-so-slightly easier to compute, we also have `A_Asciiz` to return the necessary size.
-A__INLINE
-size_t a_cstrLen_az(A_Asciiz str) { return str.len + 1; }
-void a_CStrFromAsciiz(CStr restrict dst, A_Asciiz src);
 ///
 
-/// As a convenience, `a_tCStrFromAsciiz` will allocate a destination buffer in the [temporary heap](#temporary-allocator)
-/// Likewize, `a_mCStrFromAsciiz` will use `malloc`.
+/// ##### `CStrFromAsciiz`
+/// While `Bytes` values cannot be safely converted to C-strings as discussed earlier,
+///   `Asciiz` values are guaranteed (given it was made via `AsciizFromBytes` to avoid NUL, and can therefore be converted.
+/// `void a_CStrFromAsciiz(CStr restrict dst, A_Asciiz src)`
+void a_CStrFromAsciiz(CStr restrict dst, A_Asciiz src);
+///   does exactly this.
+/// To avoid malloc-ing, it takes an in-parameter which must hold the input ascii's length + 1.
+///
+/// See also: [`cstrLen_az`](#cstrlen_az), [`tCstrFromAsciiz`](#tSctrFromAsciiz), [`mCstrFromAsciiz`](#mSctrFromAsciiz).
+///
+
+/// ##### `cstrLen_az`
+/// `size_t a_cstrLen_az(A_Asciiz str)`
+A__INLINE
+size_t a_cstrLen_az(A_Asciiz str) { return str.len + 1; }
+///   makes it easier to avoid the classic off-by-one when allocating space for a C-string.
+///
+
+/// ##### `tCStrFromAsciiz`
+/// `CStr a_tCStrFromAsciiz(A_Asciiz src)`
 A__INLINE
 CStr a_tCStrFromAsciiz(A_Asciiz src) {
   CStr dst = a_talloc(a_cstrLen_az(src));
@@ -598,6 +680,9 @@ CStr a_tCStrFromAsciiz(A_Asciiz src) {
   a_CStrFromAsciiz(dst, src);
   return dst;
 }
+///   converts an `Asciiz` to a `CStr`, allocating in the [temporary heap](#temporary-allocator).
+/// ##### `mCStrFromAsciiz`
+/// `CStr a_mCStrFromAsciiz(A_Asciiz src)`
 A__INLINE
 CStr a_mCStrFromAsciiz(A_Asciiz src) {
   CStr dst = malloc(a_cstrLen_az(src));
@@ -605,6 +690,7 @@ CStr a_mCStrFromAsciiz(A_Asciiz src) {
   a_CStrFromAsciiz(dst, src);
   return dst;
 }
+///   converts an `Asciiz` to a `CStr`, allocating in the main heap with `malloc`.
 ///
 
 ////////////////////
@@ -612,6 +698,8 @@ CStr a_mCStrFromAsciiz(A_Asciiz src) {
 ////////////////////
 ///
 /// ## Debugging Helpers
+///
+/// ##### `debug`
 ///
 /// `a_debug(varname)` takes a variable name and prints the value in that variable to stderr, prefixed by the variable name and a colon.
 /// The printf format is determined based on the type of the variable.
@@ -638,7 +726,8 @@ CStr a_mCStrFromAsciiz(A_Asciiz src) {
 
 /// ## Little Math Functions
 ///
-/// Classic `max`, `min, `clamp{,Hi,Lo}`
+/// ##### `max`, `min`, `clamp`
+/// Classic `max`, `min, `clamp{,Hi,Lo}` that do exactly what you'd expect.
 // FIXME: shouldn't I gensym the names? in case of nesting?
 #define max(a, b) ({ \
   typeof(a) a__tmp_maxa = (a); \
@@ -658,9 +747,11 @@ CStr a_mCStrFromAsciiz(A_Asciiz src) {
   _hi < _x ? _hi :          \
              _x;            \
 })
-
 ///
-/// The unprefixed macro `ver(x)` computes `1 - x`.
+/// TODO: `clamp{Hi,Lo}`
+
+/// ##### `ver`
+/// The macro `ver(x)` computes `1 - x`.
 /// I'm imagining `ver(sin(theta))` or `sqrt(ver(v*v / c*c))`.
 /// Even `ver(sqrt(x))` might come up!
 ///

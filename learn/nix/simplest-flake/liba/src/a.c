@@ -46,10 +46,10 @@ void* a_talloc(size_t nbytes) {
 
 /// The save function just returns the current `tNext`,
 /// and the reset function re-installs it.
-A_Savepoint* a_tallocSave() {
+A_Savepoint a_tallocSave() {
   return tNext;
 }
-void a_tallocReset(A_Savepoint* base) {
+void a_tallocReset(A_Savepoint base) {
 /// There's an assertion for it to be in-range, but that's all the checking we do here.
 /// I don't expect anyone to screw it up, as long as they stick to keeping the savepoints inside a stack frame.
   assert((void*)tHeap <= base && base < (void*)tEnd);
@@ -60,7 +60,7 @@ void a_tallocReset(A_Savepoint* base) {
 ////// Bytes //////
 ///////////////////
 
-bool a_cmp_Bs(A_Bytes a, A_Bytes b) {
+int a_cmp_Bs(A_Bytes a, A_Bytes b) {
   size_t minlen = min(a.len, b.len);
   int ord = strncmp((char*)a.str, (char*)b.str, minlen);
   if (ord < 0) { return -1; }

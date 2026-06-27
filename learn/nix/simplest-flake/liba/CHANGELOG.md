@@ -12,27 +12,32 @@ Later
 - move header imports from a.h to a.c as much as possible
 - technique: can I use x-macros to compile pattern-amtching to switches?
 - technique: perhaps I define macros that can emit parts of `_Generic`, and then a c file just puts together the generic it needs
+- documentation needs ToC
+- move building of tests from liba, and into the tests package?
 
-
-v 1.0.0.2-alpha
+v 1.0.0.3-alpha
 ---------------
 
-- TODO: audit for abbreviations
 - TODO: distribution scripts
 - TODO: document build script
 - TODO: documentation in pdf
 
+v 1.0.0.2-alpha
+---------------
+
 - Changed naming convention format.
+- Changed the `Sz`, `PtrDiff` set to `USz`, `ISz`, `SSz`, with more semantic implications.
 - Added naming convention for conversions.
 - Added more default headers: stdlib, unistd.
-- Changed the `Sz`, `PtrDiff` set to `USz`, `ISz`, `SSz`, with more semantic implications.
 - Added `CStr`, adding intention to `char*`.
-- New module: `Bytes` aka `Bs` for (technically mutable) slices into byte strings.
-- New module: `Asciiz`, which is `Bytes` but with the intended restriction to ascii strings that can be nul-terminated (ie contain no NUL characters).
+- Added `Bytes`/bs module for (technically mutable) slices into byte strings.
+- Added `Asciiz`/az module, which is `Bytes` but with the intended restriction to ascii strings that can be nul-terminated (ie contain no NUL characters).
 - Added smoke tests using nix.
 - Added a license and applied spdx headers.
 - Changed build scripts to export building functions to be used from the flake (or user on the commandline).
 - Added documentation in html format.
+- Updated interface documentation for style.
+- Fixed `cmp_bs` returning a bool instead of an int.
 
 v1.0.0.1-alpha
 --------------

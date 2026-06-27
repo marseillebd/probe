@@ -42,6 +42,7 @@
 
         buildPhase = ''
           . scripts/compile.bash
+          # set -x
           buildObj a
           buildStaticLib a
           buildDynamicLib a

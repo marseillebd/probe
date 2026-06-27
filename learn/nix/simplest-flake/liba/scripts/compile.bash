@@ -3,7 +3,6 @@
 # SPDX-Liense-Identifier: GPL-3.0-or-later
 
 # set -euo pipefail
-set -x
 
 ###### Paths &c ######
 
