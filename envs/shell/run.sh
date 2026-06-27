@@ -1,10 +1,12 @@
 #!/usr/bin/env sh
 set -eu
 
+here="$(dirname "$(readlink -f "$0")")"
+
 ### Main ###
 
 main() {
-  echo hello
+  echo hello, "$here"
 }
 
 ###################

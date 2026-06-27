@@ -2,10 +2,12 @@
 set -euo pipefail
 shopt -s globstar
 
+here="$(dirname "$(readlink -f "$0")")"
+
 ### Main ###
 
 main() {
-  echo hello
+  echo hello, "$here"
 }
 
 ###################
