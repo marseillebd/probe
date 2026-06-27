@@ -1,6 +1,7 @@
 Later
 -----
 
+- take version numbers from the flake
 - build system enables link-time-optimization, so I don't feel bad about not providing feature flags
 - New helper macro for defining inline functions.
   Maybe like `INLINE(LIBNAME)` gets defined based on `LIBNAME_IMPLEMENTATION`.
@@ -16,10 +17,10 @@ Later
 v 1.0.0.2-alpha
 ---------------
 
-- TODO: scripts to convert documentation to html&pdf
 - TODO: audit for abbreviations
-- TODO: document build script
 - TODO: distribution scripts
+- TODO: document build script
+- TODO: documentation in pdf
 
 - Changed naming convention format.
 - Added naming convention for conversions.
@@ -31,6 +32,7 @@ v 1.0.0.2-alpha
 - Added smoke tests using nix.
 - Added a license and applied spdx headers.
 - Changed build scripts to export building functions to be used from the flake (or user on the commandline).
+- Added documentation in html format.
 
 v1.0.0.1-alpha
 --------------

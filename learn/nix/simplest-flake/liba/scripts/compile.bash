@@ -55,9 +55,9 @@ flags_exe=(
 buildObj() {
   local name src obj
   test -n "$1" && name="$1"
+  echo >&2 "Building object file: $name"
   src="$srcdir/$name.c"
   obj="$builddir/$name.o"
-  echo >&2 "Building object file: $name"
   gcc "${flags_common[@]}" \
     -c "$src" -o "$obj"
 }
@@ -68,9 +68,9 @@ buildObj() {
 buildStaticLib() {
   local name obj lib
   test -n "$1" && name="$1"
+  echo >&2 "Building static library: $name"
   obj="$builddir/$name.o"
   lib="$builddir/lib$name.a"
-  echo >&2 "Building static library: $name"
   ar rcs "$lib" "$obj"
 }
 
@@ -78,10 +78,10 @@ buildStaticLib() {
 # compile `src/<basename>.c` to `build/lib<basename>.so`
 buildDynamicLib() {
   local name src lib
+  echo >&2 "Building dynamic library: $name"
   test -n "$1" && name="$1"
   src="$srcdir/$name.c"
   lib="$builddir/lib$name.so"
-  echo >&2 "Building dynamic library: $name"
   gcc "${flags_common[@]}" "${flags_dynamic[@]}" \
     -c "$src" -o "$lib"
 }
@@ -92,20 +92,27 @@ buildDynamicLib() {
 buildExe() {
   local name src exe
   test -n "$1" && name="$1"
+  echo >&2 "Building executable: $name"
   src="$srcdir/$name.c"
   exe="$builddir/$name"
-  echo >&2 "Building executable: $name"
   gcc "${flags_common[@]}" "${flags_exe[@]}" \
     "$src" -o "$exe"
 }
 
 buildDocs() {
-  local infile outname md
+  local infile outname md html
   test -n "$1" && infile="$1"
   test -n "$2" && outname="$2"
   echo >&2 "Building documentation: $outname"
-  < "$srcdir/$infile"     \
-    grep -E -h '^///( |$)'   \
-    | sed -E 's|^/// ?||' \
-  > "$builddir/$outname.md"
+  src="$srcdir/$infile"
+  md="$builddir/$outname.md"
+  html="$builddir/$outname.html"
+  grep -E -h '^///( |$)' "$src" \
+    | sed -E 's|^/// ?||' >"$md"
+  echo >&2 DEBUG
+  pandoc \
+    --lua-filter="scripts/meta-from-md.lua" \
+    --template="scripts/docs-template.html" \
+    --from=gfm+footnotes \
+    "$md" -o "$html"
 }

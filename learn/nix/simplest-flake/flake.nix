@@ -63,8 +63,8 @@
 
           # documentation
           mkdir -p $out/docs
-          cp build/liba.md $out/docs/
-          cp build/liba-devel.md $out/docs/
+          cp build/liba.{md,html} $out/docs/
+          cp build/liba-devel.{md,html} $out/docs/
 
           # create a single-file-header distribution
           mkdir -p $out/dist/stb

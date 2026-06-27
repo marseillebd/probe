@@ -43,7 +43,7 @@
 
 /// ## Version
 ///
-/// - `A_VERSION`: a human version name, following `PROJECT.MAJOR.MINOR.PATCH`, perhaps with an `-alpha` or `-rcXXXX` suffix
+/// - `A_VERSION`: a human version name, following `PROJECT.MAJOR.MINOR.PATCH`, perhaps with an `-alpha` or `-rcXXXX` suffix, or the like.
 ///   Semantic and Romantic versions are left for later, if ever.
 /// - `A_RELEASE`: the release date, as an integer encoded `YY,YYM,MDD`.
 ///   If you aren't as worried about guessing compatibility, this is the machine identifier.
@@ -208,7 +208,7 @@
 ///
 
 /// I may as well accept POSIX as "portable".
-/// A thte is point the only holdouts are embedded systems (with good reason),
+/// At this point the only holdouts are embedded systems (with good reason),
 ///   and Windows (with no good reason, unless you count billionare greed).
 /// Well, liba isn't designed for embedded, and I refuse to bend the knee to corporate interests.
 ///
@@ -231,7 +231,7 @@
 /// - Avoid abbreviations that aren't listed [here](#known-abbreviations).
 ///   Abreviations are never as universal as you expect, and sometimes they even conflict (eg `doc{ument,tor}`).
 /// - Use units in identifiers wherever applicable.
-///   I'm so tired of not knowing if it's seconds, milliseconds, or nanoseconds.
+///   I'm so tired of not knowing if it's seconds, milliseconds, or nanoseconds without looking at the manual.
 ///   Prefer placing it after an underscore, and use SI abbreviations.
 ///   If the base name would just be something like `n`, `count`, `length`, &c, camelCase is fine (eg `nBytes`).
 ///   Try to use units like `kph` or `ppm` for units that have a denominator, but use `_per_` when a common unit isn't available.
