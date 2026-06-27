@@ -20,6 +20,7 @@ nix flake init
 nix {build,run} [ .#<package> ]
 nix build .#<package>-<tests>
 nix develop [ .#<devShell> ]
+nix log $(realpath result) # for successful builds
 ```
 
 `nix run` will look for a binary `$out/bin/$pname` (ie the exe which is named the same as the package).

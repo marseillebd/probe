@@ -11,23 +11,24 @@ name=a
 
 # Assuming I'm executing from `$0/..`
 
-# hdr="src/$name.h"
-src="src/$name.c"
-obj="build/$name.o"
-slib="build/lib$name.a"
-dlib="build/lib$name.so"
-testsrc="src/debug.c" # FIXME rename this c file
-testexe="build/smoke"
-app="src/debug.c" # FIXME should be less hardcoded
-exe="build/$name"
+srcdir="${SRC_DIR:-src}"
+builddir="${BUILD_DIR:-build}"
+# distdir="${DIST_DIR:-dist}"
 
-mkdir -p build
+# hdr="src/$name.h"
+# src="$srcdir/$name.c"
+# obj="$builddir/$name.o"
+# slib="$builddir/lib$name.a"
+# dlib="$builddir/lib$name.so"
+# exe="$builddir/$name"
+
+mkdir -p "$builddir"
 
 ###### Compiler Setup ######
 
 flags_common=(
   -std=gnu23
-  -Isrc
+  -I"$srcdir"
   -Wall -Werror
 )
 
@@ -47,21 +48,64 @@ flags_exe=(
   -Lbuild -la
 )
 
-###### Actual Building ######
+###### Functions ######
 
-# static library (and static object file)
-gcc "${flags_common[@]}" \
-  -c "$src" -o "$obj"
-ar rcs "$slib" "$obj"
+# `buildObj <basename>`
+# compile a `src/<basename>.c` to `build/<basename>.o` library
+buildObj() {
+  local name src obj
+  test -n "$1" && name="$1"
+  src="$srcdir/$name.c"
+  obj="$builddir/$name.o"
+  echo >&2 "Building object file: $name"
+  gcc "${flags_common[@]}" \
+    -c "$src" -o "$obj"
+}
 
-# dynamic library
-gcc "${flags_common[@]}" "${flags_dynamic[@]}" \
-  -c "$src" -o "$dlib"
+# `buildStaticLib <basename>`
+# package `build/<basename>.o` to `build/lib<basename>.a`
+# requires `buildObj <basename>` first
+buildStaticLib() {
+  local name obj lib
+  test -n "$1" && name="$1"
+  obj="$builddir/$name.o"
+  lib="$builddir/lib$name.a"
+  echo >&2 "Building static library: $name"
+  ar rcs "$lib" "$obj"
+}
 
-# smoke test executable
-gcc "${flags_common[@]}" "${flags_exe[@]}" \
-  "$testsrc" -o "$testexe"
+# `buildDynamicLib <basename>`
+# compile `src/<basename>.c` to `build/lib<basename>.so`
+buildDynamicLib() {
+  local name src lib
+  test -n "$1" && name="$1"
+  src="$srcdir/$name.c"
+  lib="$builddir/lib$name.so"
+  echo >&2 "Building dynamic library: $name"
+  gcc "${flags_common[@]}" "${flags_dynamic[@]}" \
+    -c "$src" -o "$lib"
+}
 
-# DELETEME debug executable, for messing around during development
-gcc "${flags_common[@]}" "${flags_exe[@]}" \
-  "$app" -o "$exe"
+# `buildExe <basename>`
+# compile `src/basename.c` to `build/<basename>` executable
+# requires `buildStaticLib`, so link to liba
+buildExe() {
+  local name src exe
+  test -n "$1" && name="$1"
+  src="$srcdir/$name.c"
+  exe="$builddir/$name"
+  echo >&2 "Building executable: $name"
+  gcc "${flags_common[@]}" "${flags_exe[@]}" \
+    "$src" -o "$exe"
+}
+
+buildDocs() {
+  local infile outname md
+  test -n "$1" && infile="$1"
+  test -n "$2" && outname="$2"
+  echo >&2 "Building documentation: $outname"
+  < "$srcdir/$infile"     \
+    grep -E -h '^///( |$)'   \
+    | sed -E 's|^/// ?||' \
+  > "$builddir/$outname.md"
+}

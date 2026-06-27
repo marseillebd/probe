@@ -41,23 +41,21 @@
         src = ./liba;
 
         buildPhase = ''
-          # code binaries
-          bash scripts/compile.bash
-
-          # documentation
-          bash scripts/docs.bash <src/a.h >build/liba.md
-          bash scripts/docs.bash <src/a.c >build/liba-devel.md
+          . scripts/compile.bash
+          buildObj a
+          buildStaticLib a
+          buildDynamicLib a
+          buildExe smoke
+          buildDocs a.h liba
+          buildDocs a.c liba-devel
         '';
         installPhase = ''
+          echo >&2 ASDF
           # actual install files: header, static and shared libraries
           mkdir -p $out/include
           cp src/a.h $out/include/
           mkdir -p $out/lib
           cp build/liba.a $out/lib/
-
-          # DELETEME, the debug executable
-          mkdir -p $out/bin
-          cp build/a $out/bin/liba
 
           # distribute tests
           mkdir -p $out/test
@@ -76,14 +74,9 @@
               <(printf "\n\n#endif\n") \
               > $out/dist/stb/a.h
         '';
-        checkPhase = ''
-          echo >&2 testing
-          ls $out
-          $out/build/smoke
-          echo >&2 OK
-        '';
-
-        nativeBuildInputs = [];
+        nativeBuildInputs = [
+          pkgs.pandoc
+        ];
         buildInputs = [];
       };
 

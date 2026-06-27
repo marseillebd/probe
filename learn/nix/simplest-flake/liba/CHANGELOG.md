@@ -16,9 +16,10 @@ Later
 v 1.0.0.2-alpha
 ---------------
 
-- TODO: audit for abbreviations
 - TODO: scripts to convert documentation to html&pdf
-- TODO: merge building scripts into bash functions
+- TODO: audit for abbreviations
+- TODO: document build script
+- TODO: distribution scripts
 
 - Changed naming convention format.
 - Added naming convention for conversions.
@@ -29,6 +30,7 @@ v 1.0.0.2-alpha
 - New module: `Asciiz`, which is `Bytes` but with the intended restriction to ascii strings that can be nul-terminated (ie contain no NUL characters).
 - Added smoke tests using nix.
 - Added a license and applied spdx headers.
+- Changed build scripts to export building functions to be used from the flake (or user on the commandline).
 
 v1.0.0.1-alpha
 --------------
