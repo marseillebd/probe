@@ -1,15 +1,10 @@
 /****************************************/
 /**************** TODO ******************/
 /****************************************/
-/*
- * audit for abbreviations
- *
- * describe and audit for name template: `<lib prefix><flag prefix><name><type>`, where
- * - lib prefix is `a_` for function(-like macro)s; `A_` for composite types, constant(-like macro)s, and nothing when `A_NOPREFIX` is defined
- * - flag prefix is nothing, one lowercase letter, or multiple lowercase letters followed by an underscore
- * - "name" is as already described
- * - "type", if needed, is an underscore followed by the module or type name, since C doesn't do type-based overloading of any kind
- */
+//
+// audit for abbreviations
+//
+//
 /****************************************/
 
 
@@ -237,16 +232,52 @@
 
 /// ## Naming Conventions
 ///
-/// 1. Identifiers use camelCase; UpperCamel for types, lowerCamel for values.
-///    The exception is that concrete, unboxed, single-register types are lowerCamel.
-/// 2. Variations on a function, type, &c may be indicated with a single-letter prefix, like `uint` or `talloc`.
-///    Try not to stack up multiple letters, but if it happens, order them alphabetically, and separate them from the core name by an underscore.
-/// 3. Avoid abbreviations, unless they are common and mentioned in this section.
-///    The single-letter function variants are technically exempt, but if there's a pattern for the function, then document it.
-/// 4. Any variable which holds a measurement (say of time, bytes, and so on) should be suffixed with the SI abbreviation for its unit after an underscore.
-///    Examples: `n_bytes`, `deltaTime_us`, `speed_kph`, `acceleration_m_per_s2`.
-/// 5. Conversion functions should be of the form `a_<Xyz>From<Abc>`.
-///    That's longer that `To` or `2`, but it puts the target (most important?) type first.
+/// Mostly, there is one "default" convention, but there are some exceptions.
+/// Some interfaces depart because they are "comonplace": meant to be used often or as pseudo-builtins.
+/// Conversion functions also use their own name template.
+/// Beyond that:
+/// - Avoid abbreviations that aren't listed [here](#known-abbreviations).
+///   Abreviations are never as universal as you expect, and sometimes they even conflict (eg `doc{ument,tor}`).
+/// - Use units in identifiers wherever applicable.
+///   I'm so tired of not knowing if it's seconds, milliseconds, or nanoseconds.
+///   Prefer placing it after an underscore, and use SI abbreviations.
+///   If the base name would just be something like `n`, `count`, `length`, &c, camelCase is fine (eg `nBytes`).
+///   Try to use units like `kph` or `ppm` for units that have a denominator, but use `_per_` when a common unit isn't available.
+///   Obvs, micro- is `u`.
+///
+
+/// The default name template is `<lib prefix><flags><Name><type/module>`.
+/// - `Name` is, well, the core name of the interface.
+///   They are in `camelCase` (because underscore is less convenient to type).
+///   Functions, function-like macros, and macro-based syntax use `lowerCamelCase`.
+///   "Primitive" types (ie unboxed, register-size, concrete) use `lowerCamelCase`.
+///   "Abstract" types (ie compound, layout hidden or subject to change) use `UpperCamelCase`.
+/// - The `lib prefix` is `a_` or `A_`, depending on the case convention of `Name`.
+///   Users can make the prefix optional in their sourcecode by defining `A_NOPREFIX`.
+///   Private interfaces which nonetheless must be in the header use an extra underscore, and never have their prefix stripped.
+/// - `flags` is meant to indicate variations on an interface.
+///   For example, `fprintf` and `sprintf` as variations on `printf`,
+///     or `malloc`, `calloc`, and `talloc` as variations on `alloc` (cf `strcpy` vs `strncpy`).
+///   Usually, these are single lowercase letters, but in the inadvisable circumstance that you need multiple flags,
+///     each should be a single lowercase letter, they should be ordered allphabetically, and the group should be separated from `Name` by an underscore.
+///   Please document what each flag means, probably on the main interface.
+/// - `type/module` disambiguates what module the function comes from, or what type it primarily operates on.
+///   If it exists, it should be separated from `Name` by an underscore.
+///   This is literally because C has a type system and ABI too simple to handle modules or any kind of overloading.
+///   Since the reader can usually guess this from context, it's placed at the end where it's less salient.
+///
+
+/// The template for conversion functions is `<lib prefix><X>From<Y>`.
+/// - `lib prefix` is just as in the default convention.
+/// - `X` and `Y` are just the (core) names of types, both in `UpperCamel`.
+/// - We use literal `From` always instead of `To` for a) uniformity,
+///   and b) the target type is likely more important and so takes the more salient location.
+///
+
+/// Commonplace names are just `camelCase`.
+/// They don't have a lib prefix or a module.
+/// The might use `UpperCamel` for types, just as in the default convention,
+///   but they shouldn't be compound, just boxed (eg `CStr`).
 ///
 
 /// ### Known Abbreviations
@@ -370,19 +401,19 @@ typedef char* CStr;
   #define tallocReset  a_tallocReset
 
   #define Bytes         A_Bytes
-    #define mk_Bs       a_mk_Bs
-    #define lit_Bs      a_lit_Bs
-    #define spread_Bs   a_spread_Bs
-    #define spreadr_Bs  a_spreadr_Bs
+    #define mk_bs       a_mk_bs
+    #define lit_bs      a_lit_bs
+    #define spread_bs   a_spread_bs
+    #define spreadr_bs  a_spreadr_bs
     #define BsFromCStr  a_BsFromCStr
-    #define cmp_Bs      a_cmp_Bs
-    #define eq_Bs       a_eq_Bs
-  #define Asciiz                A_Asciiz
-    #define AsciizFromBytes_Bs  a_AsciizFromBytes_Bs
-    #define cstrLen_Asciiz      a_cstrLen_Asciiz
-    #define CStrFromAsciiz      a_CStrFromAsciiz
-    #define CStrFromAsciiz_t    a_CStrFromAsciiz_t
-    #define CStrFromAsciiz_m    a_CStrFromAsciiz_m
+    #define cmp_bs      a_cmp_bs
+    #define eq_bs       a_eq_bs
+  #define Asciiz             A_Asciiz
+    #define AsciizFromBytes  a_AsciizFromBytes
+    #define cstrLen_Asciiz   a_cstrLen_Asciiz
+    #define CStrFromAsciiz   a_CStrFromAsciiz
+    #define tCStrFromAsciiz  a_tCStrFromAsciiz
+    #define mCStrFromAsciiz  a_mCStrFromAsciiz
 
 #endif
 
@@ -447,9 +478,9 @@ typedef void A_Savepoint;
 A_Savepoint* a_tallocSave();
 void a_tallocReset(A_Savepoint* base);
 
-//////////////////////
-/// # Byte Strings
-//////////////////////
+//////////////////////////////
+/// # Byte Strings (`_bs`)
+//////////////////////////////
 ///
 /// Nul-terminated strings have some clear issues.
 /// If the string cannot contain NUL or the zero byte.
@@ -491,18 +522,18 @@ typedef struct A_Bytes {
 ///
 
 /// Introduction forms will be used often enough to warrant a little syntactic sugar.
-/// `a_mk_Bs` creates the struct from length and pointer, in that order.
-/// `a_lit_Bs` creates the struct from a literal string (and will not include the trailing NUL that C inserts and we do not need or want.
-#define a_mk_Bs(n, ptr) ((A_Bytes){ .len = (n), .str = (ptr) })
-#define a_lit_Bs(str) A_mk_Bs(sizeof(str) - 1, (str))
+/// `a_mk_bs` creates the struct from length and pointer, in that order.
+/// `a_lit_bs` creates the struct from a literal string (and will not include the trailing NUL that C inserts and we do not need or want.
+#define a_mk_bs(n, ptr) ((A_Bytes){ .len = (n), .str = (ptr) })
+#define a_lit_bs(str) a_mk_bs(sizeof(str) - 1, (str))
 ///
 
-/// `A_spread_Bs` disassembles the Bytes struct to pass to C functions that take the pointer and count separately.
+/// `A_spread_bs` disassembles the Bytes struct to pass to C functions that take the pointer and count separately.
 /// It puts the length before the string, which matches the order of the `%.*s` printf format specifier.
 /// It also would atch libraries who take strings as VLAs, like `(int n, char[n] data)`.
-/// For interacting with libraries that take them in reverse order for whatever reason, use `A_spreadr_Bs`.
-#define a_spread_Bs(bytes) (bytes.len), (bytes.str)
-#define a_spreadr_Bs(bytes) (bytes.str), (bytes.len)
+/// For interacting with libraries that take them in reverse order for whatever reason, use `a_spreadr_bs`.
+#define a_spread_bs(bytes) (bytes.len), (bytes.str)
+#define a_spreadr_bs(bytes) (bytes.str), (bytes.len)
 ///
 
 /// Conversions between `Bytes` and C-strings would be nice.
@@ -511,18 +542,18 @@ typedef struct A_Bytes {
 /// If you _do_ have, say a nul-terminated ascii `Bytes` that you need as a `CStr`,
 ///   see the `Asciiz` module, where you can create and convert an `Asciiz` type (either safely or cheaply).
 ///
-/// Just like `mk_Bs`, `BytesFromCStr` will not include the trailing Nul in the length.
+/// Just like `mk_bs`, `BytesFromCStr` will not include the trailing Nul in the length.
 A__INLINE
 A_Bytes a_BytesFromCStr(CStr cstr) {
-  return a_mk_Bs((iptr)strlen(cstr), (byte*)cstr);
+  return a_mk_bs((iptr)strlen(cstr), (byte*)cstr);
 }
 ///
 
-/// `a_cmp_Bs` compares two byte strings lexicographically (not locale-sensitive),
+/// `a_cmp_bs` compares two byte strings lexicographically (not locale-sensitive),
 ///   returning `-1, 0, 1` for less-than, equal-to, and greater-than, respectively.
-/// `a_eq_Bs` tests two bytestrings for equality, and has a nicer interface in `if`-statements that only care about equality.
-bool a_cmp_Bs(A_Bytes a, A_Bytes b);
-bool a_eq_Bs(A_Bytes a, A_Bytes b);
+/// `a_eq_bs` tests two bytestrings for equality, and has a nicer interface in `if`-statements that only care about equality.
+bool a_cmp_bs(A_Bytes a, A_Bytes b);
+bool a_eq_bs(A_Bytes a, A_Bytes b);
 ///
 
 /// TODO isPrefix, isSuffix, findInfix, findInfix_r, findByte, findByte_r.
@@ -537,7 +568,7 @@ bool a_eq_Bs(A_Bytes a, A_Bytes b);
 /// TODO NOPREFIX
 ///
 
-/// ## Ascii
+/// ## Ascii (`_az`)
 ///
 /// This is just an alternate name for `Bytes`, but indicating the intention to hold nul-terminated Ascii text.
 /// But, this new name comes along with intention, and some helper functions.
@@ -562,22 +593,22 @@ A_Asciiz a_AsciizFromBytes(A_Bytes bytes);
 /// To avoid malloc-ing, it takes an in-parameter which must hold the input ascii's length + 1.
 /// To make it ever-so-slightly easier to compute, we also have `A_Asciiz` to return the necessary size.
 A__INLINE
-size_t a_cstrLen_Asciiz(A_Asciiz str) { return str.len + 1; }
+size_t a_cstrLen_az(A_Asciiz str) { return str.len + 1; }
 void a_CStrFromAsciiz(CStr restrict dst, A_Asciiz src);
 ///
 
-/// As a convenience, `a_CStrFromAsciiz_t` will allocate a destination buffer in the [temporary heap](#temporary-allocator)
-/// Likewize, `a_CStrFromAsciiz_m` will use `malloc`.
+/// As a convenience, `a_tCStrFromAsciiz` will allocate a destination buffer in the [temporary heap](#temporary-allocator)
+/// Likewize, `a_mCStrFromAsciiz` will use `malloc`.
 A__INLINE
-CStr a_CStrFromAsciiz_t(A_Asciiz src) {
-  CStr dst = a_talloc(a_cstrLen_Asciiz(src));
+CStr a_tCStrFromAsciiz(A_Asciiz src) {
+  CStr dst = a_talloc(a_cstrLen_az(src));
   assert(dst);
   a_CStrFromAsciiz(dst, src);
   return dst;
 }
 A__INLINE
-CStr a_CStrFromAsciiz_m(A_Asciiz src) {
-  CStr dst = malloc(a_cstrLen_Asciiz(src));
+CStr a_mCStrFromAsciiz(A_Asciiz src) {
+  CStr dst = malloc(a_cstrLen_az(src));
   assert(dst);
   a_CStrFromAsciiz(dst, src);
   return dst;

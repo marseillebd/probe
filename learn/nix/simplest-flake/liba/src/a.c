@@ -78,7 +78,7 @@ A_Asciiz a_AsciifromBytes(A_Bytes bytes) {
   for (iptr i = 0; i < bytes.len; i++) {
     byte b = bytes.str[i];
     if ((b == 0) | (0x7F < b )) {
-      return a_mk_Bs(i, bytes.str);
+      return a_mk_bs(i, bytes.str);
     }
   }
   return bytes;

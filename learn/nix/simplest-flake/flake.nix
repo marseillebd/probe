@@ -37,7 +37,7 @@
 
       packages.liba = pkgs.stdenv.mkDerivation {
         pname = "liba";
-        version = "0.0.1";
+        version = "1.0.0.2";
         src = ./liba;
 
         buildPhase = ''
@@ -59,6 +59,10 @@
           mkdir -p $out/bin
           cp build/a $out/bin/liba
 
+          # distribute tests
+          mkdir -p $out/test
+          cp build/smoke $out/test
+
           # documentation
           mkdir -p $out/docs
           cp build/liba.md $out/docs/
@@ -72,9 +76,28 @@
               <(printf "\n\n#endif\n") \
               > $out/dist/stb/a.h
         '';
+        checkPhase = ''
+          echo >&2 testing
+          ls $out
+          $out/build/smoke
+          echo >&2 OK
+        '';
 
         nativeBuildInputs = [];
         buildInputs = [];
+      };
+
+      packages.liba-smoke = pkgs.stdenv.mkDerivation {
+        pname = "liba-smoke";
+        version = "1.0.0.2";
+        src = ./liba;
+        nativeBuildInputs = [
+          packages.liba
+        ];
+        buildPhase = ''
+          ${packages.liba}/test/smoke
+          echo OK > $out
+        '';
       };
 
     });

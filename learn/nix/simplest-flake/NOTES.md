@@ -18,10 +18,17 @@
 ```sh
 nix flake init
 nix {build,run} [ .#<package> ]
+nix build .#<package>-<tests>
 nix develop [ .#<devShell> ]
 ```
 
 `nix run` will look for a binary `$out/bin/$pname` (ie the exe which is named the same as the package).
+
+There may be a better way, like a mythical `nix build --check` with a `checkPhase`, but:
+  I haven't gotten `checkPhase` to find the output from `buildPhase` (might just be a variable name I don't know),
+  and anyway, there might be several levels of testing.
+For now, I'm creating a "dummy" package who's build phase just runs the tests that were distributed in the main package.
+I got this strategy from [pfassina](https://deepwiki.com/pfassina/lazyvim-nix/7.3-running-and-writing-tests).
 
 # What I've learned
 
