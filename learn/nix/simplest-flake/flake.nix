@@ -57,6 +57,7 @@
           cp src/a.h $out/include/
           mkdir -p $out/lib
           cp build/liba.a $out/lib/
+          cp build/liba.so $out/lib/
 
           # distribute tests
           mkdir -p $out/test
@@ -91,6 +92,28 @@
         buildPhase = ''
           ${packages.liba}/test/smoke
           echo OK > $out
+        '';
+      };
+
+      packages.hypnocantor = pkgs.stdenv.mkDerivation {
+        pname = "hypnocantor";
+        version = "1.0.0";
+        src = ./hypnocantor;
+        nativeBuildInputs = [
+          packages.liba
+          pkgs.raylib
+        ];
+        buildPhase = ''
+          gcc -v -o hypnocantor \
+            -std=gnu23 \
+            -Wall -Werror \
+            -la -lm -lraylib \
+            hypnocantor.c
+            # -O2 \
+        '';
+        installPhase = ''
+          mkdir -p $out/bin
+          mv hypnocantor $out/bin
         '';
       };
 

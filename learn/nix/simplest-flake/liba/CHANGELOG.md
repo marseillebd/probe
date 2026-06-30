@@ -22,6 +22,11 @@ v 1.0.0.3-alpha
 - TODO: document build script
 - TODO: documentation in pdf
 
+- Added `ENSURE`/`ensure`, `isArray` to support more type checking in `lengthof`.
+- Added `match` syntax to help with pattern-matching.
+- Added `impossible()` syntax.
+- Added 2-/3-D vectors and dot products, an experiment in eventually implementing geometric algebra.
+
 v 1.0.0.2-alpha
 ---------------
 

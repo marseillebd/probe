@@ -100,23 +100,17 @@
   #define A__INLINE extern inline
 #endif
 
-/// #### `pass`
-///
-/// Explicit syntax indicating "this statement intentionally left-blank".
-#define pass do {} while (0)
-///
-
 /// #### `defer`
 ///
 /// The ["defer" technical spec][defer-ts] (TS 25755, aka WG14 Working Draft N3734)
 /// will be an invaluable addition to the C language, and I want to use it right away.
 /// Thankfully, GCC can implement it with extensions and clang 22 supports the spec with `-fdefer-ts`.
 ///
-
-// The following code is based off the sample from [Jens Gustedt's blog][jgustet-defer].
-//
-// [defer-ts]: https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3734.pdf
-// [jgustedt-defer]: https://gustedt.wordpress.com/2026/02/15/defer-available-in-gcc-and-clang/
+///
+/// The implementation is based off the sample from [Jens Gustedt's blog][jgustet-defer].
+///
+/// [defer-ts]: https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3734.pdf
+/// [jgustedt-defer]: https://gustedt.wordpress.com/2026/02/15/defer-available-in-gcc-and-clang/
 
 // Section 6.5 specifies this macro do be defined.
 // If so, we simply include the header.
@@ -144,25 +138,89 @@
     /*   to run when the dummy goes out-of-scope. */                           \
     __attribute__(( __cleanup__(A_TOKEN_PASTE(a__deferF, N)),                  \
                     __deprecated__, __unused__                                 \
-                  ))                                                           \
-    int TOKEN_PASTE(a__deferV, N);                                             \
+                 ))                                                            \
+    int A_TOKEN_PASTE(a__deferV, N);                                           \
     /* Finally, "define" our cleanup function */                               \
     /* This has to be last so that its definition actually comes */            \
     /*   from the block following the macro call. */                           \
     __attribute__((__always_inline__, __deprecated__, __unused__))             \
     inline auto void                                                           \
-    TOKEN_PASTE(a__deferF, N)(int*)
+    A_TOKEN_PASTE(a__deferF, N)(int*)
 // We have no more fallbacks, but I suspect I'll be using defer in my code anyway.
 // So, we fail early.
 #else
   #error "The defer feature seems not available"
 #endif
 
+/// #### Ensure Macros
+/// `A_ENSURE(cond, msg)` and `a_ensure(cond, msg)` fail to compile when `cond` is not true at compiletime.
+/// The error message will include `msg` as part of an identifier.
+///
+/// `A_ENSURE` is valid where typedefs are, and `a_ensure` is valid as an expression (which evaluates to zero).
+///
+
+# define A_ENSURE(cond, msg)                                     \
+  typedef char A_TOKEN_PASTE(a__ensure_,msg)[(cond) ? 1 : -1];
+
+#define a_ensure(cond, msg)                                      \
+  (0 * (int)sizeof(struct {                                     \
+    char A_TOKEN_PASTE(a__ensure_,msg)[(cond) ? 1 : -1]; \
+  }))
+
+/// #### `isArray`
+/// `a_isArray(a) fails at compiletime if `a` is not an identifier or expression of array type.
+/// It is based on `a_ensure`, so it can be used wherever it would be.
+///
+/// The implementation is based on [n3325](https://www.open-std.org/JTC1/SC22/WG14/www/docs/n3325.pdf)
+///
+
+#define a__isSameTypeof(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
+#define a__decay(a) (&*(a))
+#define a_isArray(a) (!a__isSameTypeof((a), a__decay(a)))
+
+/// #### `lengthof`
+/// `a_lengthof(some_array)` computes the number of elements in an array.
+///
+/// There's a chance something like this gets added to C2y, but I'm not sure what name they'll choose.
+/// So, this dialect macro takes the `a_` prefix.
+#define a_lengthof(x) ((sizeof(x) / sizeof(x[0])) + a_ensure(a_isArray(x), isArray))
+
+/// #### `match`
+///
+/// `match (condition, declaration) { body... }` will evaluate `body` with `declaration` in-scope only when `contition` is true.
+/// `match` statements can have `else` clauses, and thus `else match` clauses.
+/// Unfortunately, this will mess with the expected behavior of `break` inside the body;
+///   use break-to-label inside the body i fyou must.
+/// Likewise for `continue`.
+///
+/// This is useful for simple pattern-matching, like `match (ptr != NULL, int value = *ptr) { ... }`.
+#define match(cond, decl) a__match(cond, decl, __COUNTER__)
+#define a__match(cond, decl, N) \
+  if (cond) \
+    for (bool A_TOKEN_PASTE(stop,N) = true; A_TOKEN_PASTE(stop,N);) \
+      for (decl; A_TOKEN_PASTE(stop,N); A_TOKEN_PASTE(stop,N) = false)
+///
+
+/// #### `pass`
+///
+/// Explicit syntax indicating "this statement intentionally left-blank".
+#define pass do {} while (0)
+///
+
 /// #### `noreturn`
 ///
 /// Which just comes from `stdnoreturn.h`.
 #include <stdnoreturn.h>
 ///
+
+/// #### `impossible()`
+/// If control flow reaches here, panic with a diagnostic (function name + line number) message.
+///
+#define impossible() ({                                                  \
+  fprintf(stderr, "[Impossible!] %s: line %d\n", __func__, __LINE__);    \
+  exit(1);                                                               \
+  NULL;                                                                  \
+})
 
 /// ## Default Headers
 ///
@@ -282,6 +340,10 @@
 
   #define STR          A_STR
   #define TOKEN_PASTE  A_TOKEN_PASTE
+  #define ENSURE       A_ENSURE
+  #define ensure       a_ensure
+  #define isArray      a_isArray
+  #define lengthof     a_lengthof
 
   #define talloc       a_talloc
   #define tallocSave   a_tallocSave
@@ -302,6 +364,17 @@
     #define tCStrFromAsciiz  a_tCStrFromAsciiz
     #define mCStrFromAsciiz  a_mCStrFromAsciiz
 
+  #define vec2f32 a_vec2f32
+    #define dot_vec2f32 a_dot_vec2f32
+  #define vec2f64 a_vec2f64
+    #define dot_vec2f64 a_dot_vec2f64
+  #define vec3f32 a_vec3f32
+    #define dot_vec3f32 a_dot_vec3f32
+  #define vec3f64 a_vec3f64
+    #define dot_vec3f64 a_dot_vec3f64
+  #define dot a_dot
+
+  #define debug a_debug
 #endif
 
 /// Some definitions (ie configuration macros) do not have their prefix stripped.
@@ -309,6 +382,9 @@
 
 /// ### Known Abbreviations
 ///
+/// - `id`: identifier
+/// - `ix`: index, but not for `i`, `j`, `k` (I've seen `idx` and `ndx`, but those are longer for no clear reason)
+/// - `ctx`: context (which is kinda meaningless without its own context)
 /// - `str`: string
 /// - `buf`: buffer
 /// - `len`: length
@@ -425,7 +501,11 @@ typedef int64_t int64;
 typedef __int128 int128; // gcc-specific?
 
 /// ##### TODO floating data types
+/// `f{32,64}` are IEEE754 binary floading point types.
+/// TODO: I'd love to add f16 and f128, maybe f80
 ///
+typedef float f32;
+typedef double f64;
 
 /// ### Idiomatic C Types
 ///
@@ -692,6 +772,68 @@ CStr a_mCStrFromAsciiz(A_Asciiz src) {
 }
 ///   converts an `Asciiz` to a `CStr`, allocating in the main heap with `malloc`.
 ///
+
+///////////////////////////
+/// # Gemoetric Algebra
+///////////////////////////
+///
+/// This module is a real work in progress.
+/// Nevertheless, the intention is to have a unified interface for vectors, rotors, and other geometric objects in at least 2- and 3-dimensions.
+///
+
+/// ## Types
+///
+/// ##### `vec<dim><type>`
+/// `a_vec<dim><type>` are the `dim`-dimentional vectors with components of `type`.
+/// `dim` is in `{2,3}`, and `type` is in `f{32,64}`.
+/// Each `vec` type has component names drawn from (in order) `x`, `y`, `z`, `w`.
+
+#define a__mkvec2(ty)                        \
+  typedef struct A_TOKEN_PASTE(a_vec2,ty) {  \
+    ty x;                                    \
+    ty y;                                    \
+  } A_TOKEN_PASTE(a_vec2,ty)
+#define a__mkvec3(ty)                        \
+  typedef struct A_TOKEN_PASTE(a_vec3,ty) {  \
+    ty x;                                    \
+    ty y;                                    \
+    ty z;                                    \
+  } A_TOKEN_PASTE(a_vec3,ty)
+a__mkvec2(f32);
+a__mkvec2(f64);
+a__mkvec3(f32);
+a__mkvec3(f64);
+///
+
+/// ##### `dot_vec<dim><ty>`
+/// `<ty> a_dot_vec<dim><ty>(vec<dim><ty> a, vec<dim><ty> avec<dim><ty> b)`
+///   computes the dot product between two vectors.
+#define a__mkdot_vec2(ty)                                                                      \
+  A__INLINE                                                                                    \
+  ty A_TOKEN_PASTE(a_dot_vec2,ty)(A_TOKEN_PASTE(a_vec2,ty) a, A_TOKEN_PASTE(a_vec2,ty) b) {    \
+    return a.x*b.x + a.y*b.y;                                                                  \
+  }
+#define a__mkdot_vec3(ty)                                                                      \
+  A__INLINE                                                                                    \
+  ty A_TOKEN_PASTE(a_dot_vec3,ty)(A_TOKEN_PASTE(a_vec3,ty) a, A_TOKEN_PASTE(a_vec3,ty) b) {    \
+    return a.x*b.x + a.y*b.y + a.z*b.z;                                                        \
+  }
+a__mkdot_vec2(f32)
+a__mkdot_vec2(f64)
+a__mkdot_vec3(f32)
+a__mkdot_vec3(f64)
+///
+
+/// ##### `dot`
+/// A generic dot product, dispatched based on the type of its inputs.
+#define a_dot(a, b) _Generic(typeof(a), \
+  a_vec2f32 : a_dot_vec2f32, \
+  a_vec2f64 : a_dot_vec2f64, \
+  a_vec3f32 : a_dot_vec3f32, \
+  a_vec3f64 : a_dot_vec3f64  \
+)((a), (b))
+///
+
 
 ////////////////////
 /// # Miscellany
