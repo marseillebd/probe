@@ -579,12 +579,13 @@ a__mkAlup(ial, a_alup_i)
 a__mkAlup(sal, a_alup_s)
 a__mkAlup(ual, a_alup_u)
 #define a_alup(theSize, alignTo) \
-  (_Generic(typeof(theSize),   \
-    usz : a_alup_u,   \
-    isz : a_alup_i,   \
-    default: a_alup_i \
-  )(theSize, alignTo))
-    /* ssz : a_alup_s,   \ */
+  (_Generic(theSize,             \
+    usz     : a_alup_u,   \
+    isz     : a_alup_i,   \
+  default : _Generic(theSize,    \
+    ssz     : a_alup_s,   \
+    default : a_alup_i    \
+  ))(theSize, alignTo))
 
 /////////////////////
 /// # Size Macros
