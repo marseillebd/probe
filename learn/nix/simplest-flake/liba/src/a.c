@@ -26,21 +26,16 @@ char* tNext = &tHeap[0];
 
 /// `talloc` just bumps `tNext` and re-aligns.
 /// The `tHeap` address is already aligned to the fundamental alignment, so we can do the alignment at the end.
-void* a_talloc(size_t nbytes) {
-  if (nbytes == 0) {
-    nbytes = 1;
+void* a_talloc(size_t nBytes) {
+  if (nBytes == 0) {
+    nBytes = 1;
   }
-  if ((ptrdiff_t)nbytes > tEnd - tNext) {
+  nBytes = a_alup(nBytes, A_FUND_ALIGN);
+  if ((ptrdiff_t)nBytes > tEnd - tNext) {
     return NULL;
   }
   void* out = tNext;
-  tNext += nbytes;
-  { // ensure alignment
-    // TODO: I beleive max_align_t must has a power-of-two alignment
-    uintptr_t mask = alignof(max_align_t) - 1;
-    uintptr_t pad = (alignof(max_align_t) - (uintptr_t)tNext) & mask;
-    tNext += pad;
-  }
+  tNext += nBytes;
   return out;
 }
 

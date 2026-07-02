@@ -46,7 +46,6 @@
           buildObj a
           buildStaticLib a
           buildDynamicLib a
-          buildExe smoke
           buildDocs a.h liba
           buildDocs a.c liba-devel
         '';
@@ -58,10 +57,6 @@
           mkdir -p $out/lib
           cp build/liba.a $out/lib/
           cp build/liba.so $out/lib/
-
-          # distribute tests
-          mkdir -p $out/test
-          cp build/smoke $out/test
 
           # documentation
           mkdir -p $out/docs
@@ -90,8 +85,11 @@
           packages.liba
         ];
         buildPhase = ''
-          ${packages.liba}/test/smoke
-          echo OK > $out
+          . scripts/compile.bash
+          buildExe smoke
+
+          mkdir -p $out/bin
+          cp build/smoke $out/bin/liba-smoke
         '';
       };
 

@@ -13,11 +13,12 @@ Later
 - technique: can I use x-macros to compile pattern-amtching to switches?
 - technique: perhaps I define macros that can emit parts of `_Generic`, and then a c file just puts together the generic it needs
 - documentation needs ToC
-- move building of tests from liba, and into the tests package?
+- NOTE distinguish simd types (often called "vector") from dynamic arrays (often also called "vector") and physics vectors (I know of no other name)
 
 v 1.0.0.3-alpha
 ---------------
 
+- TODO: dynamic array type
 - TODO: distribution scripts
 - TODO: document build script
 - TODO: documentation in pdf
@@ -26,6 +27,11 @@ v 1.0.0.3-alpha
 - Added `match` syntax to help with pattern-matching.
 - Added `impossible()` syntax.
 - Added 2-/3-D vectors and dot products, an experiment in eventually implementing geometric algebra.
+- Added alignment concepts: `FUND_ALIGN`, alignment types `?al`, `pow2`, `isPow2`, and `alup`.
+
+- Added more examples to smoke test suite.
+- Moved smoke test from building in liba to building and running in liba-smoke.
+- Fixed `A_VERSION` being syntactically incorrect.
 
 v 1.0.0.2-alpha
 ---------------

@@ -53,10 +53,7 @@
 #define A_VERSION_MAJOR 0
 #define A_VERSION_MINOR 0
 #define A_VERSION_PATCH 2
-#define A_VERSION ( \
-  A_VERSION_PROJECT "." A_VERSION_MAJOR "." A_VERSION_MINOR "." A_VERSION_PATCH \
-  "-alpha" \
-)
+#define A_VERSION "1.0.0.2-alpha"
 #define A_RELEASE 20260627
 
 /// ## Dialect
@@ -345,6 +342,14 @@
   #define isArray      a_isArray
   #define lengthof     a_lengthof
 
+  #define FUND_ALIGN   A_FUND_ALIGN
+  #define pow2         a_pow2
+  #define isPow2       a_isPow2
+  #define alup         a_alup
+    #define alup_i     a_alup_i
+    #define alup_s     a_alup_s
+    #define alup_u     a_alup_u
+
   #define talloc       a_talloc
   #define tallocSave   a_tallocSave
   #define tallocReset  a_tallocReset
@@ -461,7 +466,7 @@ typedef uint8_t octet;
 typedef unsigned char byte;
 ///
 
-/// ##### `isz`, `ssz`, `usz`
+/// ##### `isz`, `usz`, `ssz`
 /// The notion of "size", like the maxium size of a memory object, varies between computers.
 /// Thus we use these types for portability.
 ///
@@ -518,6 +523,68 @@ typedef double f64;
 /// This is a synonym for `char*`, but explicitly intended as a nul-terminated string.
 typedef char* CStr;
 ///
+
+/// #### Alignment
+///
+/// Alignment can be very important in C, but usually uses size types.
+/// This set of numeric types indicate that these "sizes" are actually alignments, and should be powers of 2.
+///
+/// I also include some helper constants and functions.
+
+/// ##### `ial`, `ual`, and `sal`
+///
+/// We follow the pattern of the size-types, since alignment appears in the same way.
+typedef isz ial;
+typedef usz ual;
+typedef ssz sal;
+///
+
+/// ##### `FUND_ALIGN`
+/// The fundamental alignment is "the strictest alignment of any type"
+///   (though it appears GCC doesn't count SIMD types).
+/// It is `A_FUND_ALIGN`, which is easier to read and remember than `alignof(max_align_t)`
+///   (I literally already tried `sizeof(...)` just a few days after reading the definition).
+///
+/// TODO: I beleive max_align_t must has a power-of-two alignment, but I'm not sure
+#define A_FUND_ALIGN alignof(max_align_t)
+///
+
+/// TODO alignment helpers: ensure one-hot or power-of-2, make power-of-2
+
+/// ##### `pow2`
+/// I'm really uncertain about using this name, but,,,
+/// `a_pow2(n)` computes 2^n.
+/// It's probably UB to pass anything negative or larger than the maximum possible alignment.
+#define a_pow2(n) (1 << (n))
+///
+
+#include <stdbit.h> // TODO mote this to the imported headers
+#define a_isPow2(inp) (1 >= stdc_count_ones(inp))
+
+/// ##### `alup`
+/// `a_alup` increases a size type until it is matches the given alignment.
+/// It is a generic over `a_alup_u`, `a_alup_i`, and `a_alup_s`.
+
+#define a__mkAlup(ty, name)                           \
+  A__INLINE                                           \
+ty name(ty theSize, ty alignTo) {                     \
+  assert(a_isPow2((ual)alignTo));                     \
+  ty loMask = alignTo - 1;                            \
+  return theSize + (loMask & -(theSize & loMask));    \
+}
+  //^ `-(theSize & loMask)` determines how far the lo-bits are from the next requested power of 2.
+  //^ The final `loMask &` handles the already-aligned case by trimming off any carry-out beyond the lower bits.
+
+a__mkAlup(ial, a_alup_i)
+a__mkAlup(sal, a_alup_s)
+a__mkAlup(ual, a_alup_u)
+#define a_alup(theSize, alignTo) \
+  (_Generic(typeof(theSize),   \
+    usz : a_alup_u,   \
+    isz : a_alup_i,   \
+    default: a_alup_i \
+  )(theSize, alignTo))
+    /* ssz : a_alup_s,   \ */
 
 /////////////////////
 /// # Size Macros
