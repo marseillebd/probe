@@ -29,10 +29,13 @@
 
       # for `nix run`, `nix build`
       packages.default = packages.tdc;
+      # for `nix develop`
+      devShells.default = devShells.tdc;
 
-      devShells.default = pkgs.mkShell {
-        packages =  packages.tdc.nativeBuildInputs
-                 ++ packages.tdc.buildInputs;
+      devShells.tdc = pkgs.mkShell {
+        buildInputs =
+          packages.tdc.nativeBuildInputs
+          ++ packages.tdc.buildInputs;
       };
 
       packages.tdc = pkgs.stdenv.mkDerivation {
@@ -42,18 +45,22 @@
 
         buildPhase = ''
           . scripts/compile.bash
+          buildExe tdc # this is broken, because cabal is desperate for $HOME and network access and who knows what else?
           buildDocs index
         '';
         installPhase = ''
+          # executable
+          mkdir -p $out/bin
+          mv build/tdc $out/bin/
           # documentation
           mkdir -p $out/docs
           cp docs/*.md $out/docs/
           cp build/*.html $out/docs/
         '';
-        nativeBuildInputs = [
-          pkgs.pandoc
-          pkgs.racket
-          pkgs.qbe
+        nativeBuildInputs = with pkgs; [
+          pandoc
+          haskell.compiler.ghc910 cabal-install
+          qbe
         ];
         buildInputs = [];
       };
@@ -67,6 +74,7 @@
         ];
         buildPhase = ''
           . scripts/compile.bash
+          buildExe tdc
         '';
         installPhase = ''
           mkdir -p $out/bin

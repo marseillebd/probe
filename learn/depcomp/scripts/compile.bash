@@ -25,8 +25,15 @@ mkdir -p "$builddir"
 
 ###### Compiler Setup ######
 
-
 ###### Functions ######
+
+buildExe() {
+  local name exe
+  name="$1"
+  cabal build
+  exe=find dist-newstyle/ -executable -type f -name toy
+  cp "$exe" "$builddir/$name"
+}
 
 buildDocs() {
   local name md html
