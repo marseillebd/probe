@@ -108,7 +108,6 @@ buildDocs() {
   html="$builddir/$outname.html"
   grep -E -h '^///( |$)' "$src" \
     | sed -E 's|^/// ?||' >"$md"
-  echo >&2 DEBUG
   pandoc \
     --lua-filter="scripts/meta-from-md.lua" \
     --template="scripts/docs-template.html" \
