@@ -10,6 +10,7 @@ import System.Exit (exitFailure)
 import Data.Map (Map)
 import Control.Monad.State (State, gets, modify, evalState)
 import Data.Maybe (fromMaybe)
+import Text.Megaparsec as P
 
 import qualified Data.Map as Map
 
@@ -26,12 +27,12 @@ main = do
 ------ Compile ------
 ---------------------
 
-compileProgram :: Syntax -> Qbe String
+compileProgram :: Sexpr -> Qbe String
 compileProgram ast = compileFunction "main" ast
 
-compileFunction :: String -> Syntax -> Qbe String
+compileFunction :: String -> Sexpr -> Qbe String
 -- FIXME we need to gensym instead of hardcoding eg %v0
-compileFunction funcName (IntLit n) = do
+compileFunction funcName (AInt n) = do
   v <- gensym "v"
   pure $ unlines
     [ "export function w $"++ funcName ++ "() {"
@@ -72,16 +73,19 @@ I'd still need a Vault, or an annotation (which I'm really thinking about using 
 Yeah, the annotations are for source location or type annotation or whatever.
 -}
 
-data Syntax
-  = IntLit Integer
+data Sexpr
+  -- The `A___` constructors are for atoms.
+  = AInt Integer
+  | ASym String
+  | SObj [Sexpr] (Map String Sexpr)
   deriving (Show)
 
 ---------------------
 ------ Parsing ------
 ---------------------
 
-parseFile :: String -> Maybe Syntax
-parseFile inp = IntLit <$> readMaybe inp
+parseFile :: String -> Either String Sexpr
+parseFile inp = AInt <$> readMaybe inp
 
 -----------------------
 ------ Utilities ------
