@@ -561,7 +561,7 @@ typedef ssz sal;
 #include <stdbit.h> // TODO mote this to the imported headers
 #define a_isPow2(inp) (1 >= stdc_count_ones(inp))
 
-/// ##### `alup`
+/// ##### `SZ alup(SZ theSize, SZ alignTo_B)`
 /// `a_alup` increases a size type until it is matches the given alignment.
 /// It is a generic over `a_alup_u`, `a_alup_i`, and `a_alup_s`.
 
@@ -902,6 +902,24 @@ a__mkdot_vec3(f64)
 )((a), (b))
 ///
 
+///////////////////////////
+/// # Garbage Collector
+///////////////////////////
+
+/// TODO: document and test
+
+typedef struct a_gcObj a_gcObj;
+
+// The [Vjekoslav Krajacic method of keyword arguments in C](https://x.com/vkrajacic/status/1749816169736073295)
+//   stores keyword arguments in a struct (where defaults are indicated by zero-initialization)
+//   and uses a macro to arrange the struct building/passing for a pleasant code look.
+struct a__gcNewParams {
+  usz nChildren;
+  usz nBytes;
+  void (*fini)(a_gcObj*);
+};
+a_gcObj* a__gcNew(struct a__gcNewParams kwargs);
+#define a_gcNew(...) (a__gcNew((struct a__gcNewParams){__VA_ARGS__}))
 
 ////////////////////
 /// # Miscellany
