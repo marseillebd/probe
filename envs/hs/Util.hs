@@ -8,7 +8,7 @@ module Util
   -- * Functions, Functors, &c
   , on, (&), (<&>)
   -- * Control Flow
-  , maybeM_, forM, forM_
+  , pass, maybeM_, forM, forM_, void
   -- * Shell-type Shii
   , mkdir, mkdir_p
   , rmdir, rmdir_r, rmdir_rf
@@ -35,8 +35,11 @@ head (x:_) = Just x
 unsafeHead :: [a] -> a
 unsafeHead = Prelude.head
 
+pass :: (Applicative m) => m ()
+pass = pure ()
+
 maybeM_ :: (Applicative m) => Maybe a -> (a -> m x) -> m ()
-maybeM_ Nothing _ = pure ()
+maybeM_ Nothing _ = pass
 maybeM_ (Just x) action = void $ action x
 
 mkdir, mkdir_p :: FilePath -> IO ()
