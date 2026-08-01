@@ -908,6 +908,10 @@ a__mkdot_vec3(f64)
 
 /// TODO: document and test
 
+// maxHeap is really how many KiB can be allocated until a collection is triggered.
+// Pass zero to use the default (for now, I'm just saying 1GB)
+bool a_gcInit(usz maxHeap_KiB);
+
 typedef struct a_gcObj a_gcObj;
 
 // The [Vjekoslav Krajacic method of keyword arguments in C](https://x.com/vkrajacic/status/1749816169736073295)
@@ -920,6 +924,13 @@ struct a__gcNewParams {
 };
 a_gcObj* a__gcNew(struct a__gcNewParams kwargs);
 #define a_gcNew(...) (a__gcNew((struct a__gcNewParams){__VA_ARGS__}))
+
+// You'll still need to manually manage a rootlist, since I'm not going to try tracing the stack (and wherever else root might be stored).
+typedef struct a_gcRoot a_gcRoot;
+a_gcRoot* a_gcNewRoot(a_gcObj* theRoot);
+void a_gcMarkRoot(a_gcRoot* this, a_gcObj* rootObj); // nullable, which frees the root (ie don't use the root after it has been set to null, and you have to set it null before the root goes out of scope)
+
+void a_gcCollect();
 
 ////////////////////
 /// # Miscellany

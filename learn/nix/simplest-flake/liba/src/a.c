@@ -57,16 +57,44 @@ void a_tallocReset(A_Savepoint base) {
 
 ////// Engine //////
 
+/// GC roots for now will just be a linked list.
+/// It's simple and can be swapped out later, since it's an abstract type.
+struct a_gcRoot {
+  a_gcObj* theRoot;
+  a_gcRoot* next;
+};
+
 typedef struct gcEngine {
-  char* active;
+  void* active;
   usz cap;
   usz used;
-  char* stale;
-  // TODO a rootlist
+  void* stale;
+  a_gcRoot* firstRoot; // nullable
   a_gcObj* finiList; // nullable
 } gcEngine;
 
-gcEngine gc;
+gcEngine gc = {0};
+
+bool a_gcInit(usz maxHeap_KiB) {
+  assert(gc.active == NULL);
+  assert(gc.stale == NULL);
+  if (maxHeap_KiB == 0) { maxHeap_KiB = 1024 * 1024; }
+  usz maxHeap_B = 1024 * maxHeap_KiB;
+
+  gc.active = aligned_alloc(maxHeap_B, 4);
+  gc.stale = aligned_alloc(maxHeap_B, 4);
+  if (gc.active == NULL || gc.stale == NULL) {
+    free(gc.active);
+    free(gc.stale);
+    return false;
+  }
+  assert(gc.active != NULL);
+  assert(gc.stale != NULL);
+  gc.cap = maxHeap_B;
+  gc.firstRoot = NULL;
+  gc.finiList = NULL;
+  return true;
+}
 
 static
 void* gcAlloc(usz objSize) {
@@ -134,12 +162,28 @@ typedef struct gcFini {
 /// The number of butes should reflect allocated bytes, not necesarily used bytes.
 /// The number of allocated bytes should be a multiple of the size of a `gcObj*`.
 
+////// Roots //////
+
+a_gcRoot* a_gcNewRoot(a_gcObj* theRoot) {
+  assert(theRoot != NULL);
+  a_gcRoot* out = malloc(sizeof(a_gcRoot));
+  assert(out != NULL);
+  *out = (a_gcRoot){ .theRoot = theRoot, .next = gc.firstRoot };
+  gc.firstRoot = out;
+  return out;
+}
+
+void a_gcMarkRoot(a_gcRoot* this, a_gcObj* rootObj) {
+  assert(this->theRoot != NULL);
+  this->theRoot = rootObj;
+}
+
 ////// Elimination Rules //////
 
 // check for forwarding
 // outside of collection, objects will not be forwarded
 static inline
-bool gc_isFwded(a_gcObj* obj) {
+bool gc_isFwded(const a_gcObj* obj) {
   return (obj->as.hdr & 3) == 0;
 }
 static inline
@@ -233,12 +277,10 @@ a_gcObj* a__gcNew(struct a__gcNewParams kwargs) {
   // TODO probably enforce some kind of maximum object size
   a_gcObj* obj = gcAlloc(objSz);
   if (obj == NULL) {
-    // TODO collect
-    fprintf(stderr, "unimplemented: gc collection\n");
-    exit(1);
+    a_gcCollect();
     obj = gcAlloc(objSz);
     if (obj == NULL) {
-      // the most general would be to parameterize the handler,
+      // TODO the most general would be to parameterize the handler,
       // but panic is good enoguh for now.
       // I suppose there's only a few useful options:
       //   panic,
@@ -260,6 +302,7 @@ a_gcObj* a__gcNew(struct a__gcNewParams kwargs) {
     objFini->next = gc.finiList;
     gc.finiList = obj;
   }
+  return obj;
 }
 
 ////// Collection //////
@@ -280,8 +323,8 @@ a_gcObj* a__gcNew(struct a__gcNewParams kwargs) {
 ///   - ie the active buffer before a certain point contains traced&updated objects, and after that contains objects that have been moved but not traced/updated
 ///   - iterate over the children in the active buffer (which may be extended during iteration):
 ///     - if the child is in the active buffer:
-///       - skip
-///     - if the child is a forwarded object in the stale buffer:
+///       - skip (actually, this won't happen b/c only untraced objs are copied into the new active buffer)
+///     - if the child is a forwarded object (and thus in the stale buffer):
 ///       - replace the pointer in the active buffer with the forwarding pointer
 ///     - if the child is an unforwarded object in the stale buffer:
 ///       - memcopy the child into the active buffer (which extends what we have to iterate over)
@@ -295,6 +338,75 @@ a_gcObj* a__gcNew(struct a__gcNewParams kwargs) {
 ///     - if the object is not forwarded:
 ///       - run the finalizer
 ///       - delete the node (do not "increment" the previous node variable)
+
+static inline
+a_gcObj* gc_xferObj(a_gcObj* oldObj) {
+  if (gc_isFwded(oldObj)) {
+    return gc_fwdPtr(oldObj);
+  }
+  usz objSize = gc_objSize(oldObj);
+  // allocate on active buffer
+  assert((gc.used & 3) == 0);
+  assert(gc.used + objSize > gc.cap);
+  void* newObj = gc.active + gc.used;
+  gc.used += objSize;
+  assert((gc.used & 3) == 0);
+  // transfer data and update old obj to a forwarding pointer
+  memcpy(newObj, oldObj, objSize);
+  oldObj->as.fwd = newObj;
+  // done
+  return newObj;
+}
+
+void a_gcCollect() {
+  // swap buffers
+  {
+    char* tmp = gc.stale;
+    gc.stale = gc.active;
+    gc.stale = tmp;
+  }
+  // trace roots
+  {
+    a_gcRoot** link = &gc.firstRoot;
+    while (*link != NULL) {
+      a_gcRoot* node = *link;
+      a_gcObj* obj = node->theRoot;
+      if (obj == NULL) { //collect free'd roots
+        *link = node->next;
+        free(node);
+      } else {
+        node->theRoot = gc_xferObj(obj);
+        link = &node->next;
+      }
+    }
+  }
+  // trace newly-active buffer
+  // TODO am I sure that `gc.used` will be loaded each time the loop condition is checked
+  for (usz nextOff = 0; nextOff < gc.used; ) {
+    a_gcObj* obj = gc.active + nextOff;
+    assert(!gc_isFwded(obj));
+    for(usz n = 0; n < gc_nChildren(obj); n++) {
+      a_gcObj** child_p = gc_child(obj, n);
+      *child_p = gc_xferObj(*child_p);
+    }
+  }
+  // run finalizers
+  {
+    a_gcObj** link = &gc.finiList;
+    while (*link != NULL) {
+      a_gcObj* obj = *link;
+      gcFini* fini = gc_getFini(obj);
+      if (gc_isFwded(obj)) {
+        *link = gc_fwdPtr(obj);
+      } else {
+        fini->fini(obj);
+        *link = fini->next;
+      }
+      link = &fini->next;
+    }
+  }
+}
+
 
 ///////////////////
 ////// Bytes //////
